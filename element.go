@@ -391,3 +391,16 @@ func (e *Element) PullSampleOrSkip(skip bool) (sample *Sample, err error) {
 
 	return
 }
+
+//Helper function for async pusher
+func (e *Element) PushBufferAsync(buffer []byte) error {
+
+	b := C.CBytes(buffer)
+	defer C.free(unsafe.Pointer(b))
+	//It pushes go buf to pipe line buffer is duped!
+	Cbool := C.x_push_buffer_async(e.GstElement, b, C.int(len(buffer)))
+	if Cbool == 0 {
+		return errors.New("push-buffer error")
+	}
+	return nil
+}

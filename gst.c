@@ -214,6 +214,7 @@ gchar* X_gst_pad_get_name(GstPad* pad) {
   return gst_pad_get_name(pad);
 }
 
+//By BKSWORM
 void cb_bus_message(GstBus * bus, GstMessage * message, gpointer poll_data) {
   GError *err;
   gchar *debug_info;
@@ -228,4 +229,23 @@ void cb_bus_message(GstBus * bus, GstMessage * message, gpointer poll_data) {
   g_clear_error (&err);
   g_free (debug_info);
   //go_callback_bus_message_thunk(bus, message, poll_data);
+}
+
+// Function to push go buf to pipe line buffer is duped
+gboolean x_push_buffer_async(GstElement *element, void *buffer,int len) {
+    GstFlowReturn ret;
+    gpointer p = g_memdup(buffer, len);
+    GstBuffer *data = gst_buffer_new_wrapped(p, len); //TODO: do we need to free it?
+
+    // Push the buffer into the appsrc
+    g_signal_emit_by_name (GST_APP_SRC(G_OBJECT(element)), "push-buffer", data, &ret);
+   gst_buffer_unref (data) ;
+
+    if (ret != GST_FLOW_OK) {
+        // We got some error, stop sending data
+        g_print ("push async error\n");
+        return FALSE;
+    }
+
+    return TRUE;
 }
