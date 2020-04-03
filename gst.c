@@ -215,5 +215,17 @@ gchar* X_gst_pad_get_name(GstPad* pad) {
 }
 
 void cb_bus_message(GstBus * bus, GstMessage * message, gpointer poll_data) {
+  GError *err;
+  gchar *debug_info;
+ // BusMessageUserData *s = (BusMessageUserData *)user_data;
+  //int pipelineId = s->pipelineId;
+
+  /* Print error details on the screen */
+  gst_message_parse_error (message, &err, &debug_info);
+  g_printerr ("Error received from element %s: %s\n", GST_OBJECT_NAME (message->src), err->message);
+  g_printerr ("Debugging information: %s\n", debug_info ? debug_info : "none");
+  ///goHandleErrorMessage(msg, pipelineId, err, debug_info);
+  g_clear_error (&err);
+  g_free (debug_info);
   //go_callback_bus_message_thunk(bus, message, poll_data);
 }

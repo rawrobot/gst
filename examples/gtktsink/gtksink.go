@@ -1,8 +1,8 @@
 package main
 
 import (
+	"errors"
 	"log"
-	"os"
 
 	gst "github.com/bksworm/gst-1"
 
@@ -11,7 +11,7 @@ import (
 )
 
 type Player struct {
-	pipe   *gstreamer.Pipeline
+	pipe   *gst.Pipeline
 	window *gtk.Window
 }
 
@@ -30,13 +30,16 @@ func NewPlayer() *Player {
 	vbox.SetSizeRequest(640, 480)
 	p.window.Add(vbox)
 
-	p.pipe, err = gstreamer.New(" tcpserversrc host=0.0.0.0 port=7001 ! multipartdemux ! jpegdec ! " +
+	//p.pipe, err = gst.ParseLaunch(" tcpserversrc host=0.0.0.0 port=7001 ! multipartdemux ! jpegdec ! " +
+	///.pipe, err = gst.ParseLaunch("videotestsrc pattern=ball ! video/x-raw,width=640,height=480 ! " +
+	p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
 		" videoconvert ! video/x-raw,format=BGRA ! gtksink name=sink ") //
+
 	if err != nil {
 		log.Fatalln("pipeline create error", err)
 	}
 
-	sink := p.pipe.FindElement("sink")
+	sink := p.pipe.GetByName("sink")
 	if sink == nil {
 		log.Println("Cann't get sink!")
 		return nil
@@ -56,12 +59,12 @@ func NewPlayer() *Player {
 
 func (p *Player) Run() {
 	p.window.ShowAll()
-	p.pipe.Start()
+	p.pipe.SetState(gst.StatePlaying)
 	gtk.Main()
 }
 
 func main() {
-	gstreamer.Init()
+	//	gst.Init()
 	gtk.Init(nil)
 	p := NewPlayer()
 	if p != nil {
@@ -71,7 +74,7 @@ func main() {
 }
 
 //the most time is  spent here due to  go type system and memory model
-func getWidget(e *gstreamer.Element) (w *gtk.Widget) {
+func getWidget(e *gst.Element) (w *gtk.Widget) {
 	var ok bool
 	obj := glib.Take(e.AsObj())
 	p, err := obj.GetProperty("widget")
@@ -85,4 +88,12 @@ func getWidget(e *gstreamer.Element) (w *gtk.Widget) {
 		return w
 	}
 	return w
+}
+
+func isWindow(obj glib.IObject) (*gtk.Window, error) {
+	// Make type assertion (as per gtk.go).
+	if win, ok := obj.(*gtk.Window); ok {
+		return win, nil
+	}
+	return nil, errors.New("not a *gtk.Window")
 }

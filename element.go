@@ -19,6 +19,7 @@ import (
 var (
 	mutex         sync.Mutex
 	callbackStore = map[uint64]*Element{}
+	EOS           = errors.New("EOS")
 )
 
 type PadAddedCallback func(element *Element, pad *Pad)
@@ -330,4 +331,63 @@ func nonCopyGoBytes(ptr uintptr, length int) []byte {
 
 func nonCopyCString(data *C.char, size C.int) []byte {
 	return nonCopyGoBytes(uintptr(unsafe.Pointer(data)), int(size))
+}
+
+//Added by BKSWORM
+func (e *Element) AsObj() unsafe.Pointer {
+	return unsafe.Pointer(e.GstElement)
+}
+
+//Pulls sanple to keep pipe run, but if skeep doesn't  copy it just unref() and returns nil
+func (e *Element) PullSampleOrSkip(skip bool) (sample *Sample, err error) {
+	//All rendered buffers will be put in a queue so that the application can pull samples at its own rate.
+	// Note that when the application does not pull samples fast enough, the queued buffers
+	// could consume a lot of memory, especially when dealing with raw video frames.
+	CGstSample := C.gst_app_sink_pull_sample((*C.GstAppSink)(unsafe.Pointer(e.GstElement)))
+	if CGstSample == nil {
+		//If an EOS event was received before any buffers, this function returns NULL.
+		//Use gst_app_sink_is_eos () to check for the EOS condition.
+		if e.IsEOS() {
+			err = EOS
+		} else {
+			err = errors.New("could not gst_app_sink_pull_sample()")
+		}
+		return
+	}
+	defer C.gst_sample_unref(CGstSample) //it should work fast for go 1.14 due to defer inlining
+
+	//Do we need this sample right now?
+	if skip {
+		return
+	}
+
+	gstBuffer := C.gst_sample_get_buffer(CGstSample)
+	if gstBuffer == nil {
+		err = errors.New("could not gst_sample_get_buffer() from appsink")
+		return
+	}
+
+	var buf [C.sizeof_GstMapInfo]byte //to avoid malloc, but use stack
+	mapInfo := (*C.GstMapInfo)(unsafe.Pointer(&buf[0]))
+	//mapInfo := (*C.GstMapInfo)(unsafe.Pointer(C.malloc(C.sizeof_GstMapInfo)))
+	//defer C.free(unsafe.Pointer(mapInfo))
+
+	if int(C.X_gst_buffer_map(gstBuffer, mapInfo)) == 0 {
+		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
+		return
+	}
+	defer C.gst_buffer_unmap(gstBuffer, mapInfo)
+
+	CData := (*[1 << 30]byte)(unsafe.Pointer(mapInfo.data))
+	data := make([]byte, int(mapInfo.size))
+	copy(data, CData[:])
+
+	duration := uint64(C.X_gst_buffer_get_duration(gstBuffer))
+
+	sample = &Sample{
+		Data:     data,
+		Duration: duration,
+	}
+
+	return
 }

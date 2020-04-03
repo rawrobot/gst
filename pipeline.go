@@ -3,6 +3,11 @@ package gst
 /*
 #cgo pkg-config: gstreamer-1.0
 #include "gst.h"
+
+char* getErrorMsg(GError* err) {
+	return err->message ;
+}
+
 */
 import "C"
 
@@ -24,9 +29,9 @@ func ParseLaunch(pipelineStr string) (p *Pipeline, err error) {
 	defer C.g_free(C.gpointer(unsafe.Pointer(pDesc)))
 
 	gstElt := C.gst_parse_launch(pDesc, &gError)
-
+	defer C.g_clear_error(&gError)
 	if gError != nil {
-		err = errors.New("create pipeline error")
+		err = errors.New("create pipeline error: " + C.GoString(C.getErrorMsg(gError)))
 		return
 	}
 
