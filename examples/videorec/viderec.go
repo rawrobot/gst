@@ -10,11 +10,11 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-const appId = "com.github.bksworm.gst.camui"
+const appId = "com.github.bksworm.gst.videorec"
 
 type CamUiApp struct {
 	application *gtk.Application
-	player      *Player
+	player      *VideoRec
 }
 
 func NewCamUiApp() (app *CamUiApp, err error) {
@@ -66,7 +66,7 @@ func (ca *CamUiApp) onActivate() {
 	win, err := isWindow(obj)
 	errorCheck(err)
 
-	p := NewPlayer()
+	p := NewVideoRec()
 	err = p.Assamble()
 	errorCheck(err)
 	//get container for the gtksink widget

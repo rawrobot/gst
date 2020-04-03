@@ -1,5 +1,5 @@
 //module github.com/notedit/gst
-module github.com/bksworm/gst-1
+module github.com/bksworm/gst
 
 go 1.12
 
