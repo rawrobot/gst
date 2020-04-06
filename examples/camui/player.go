@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -23,14 +25,16 @@ type Player struct {
 	widget    *gtk.Widget
 	photoSink *gst.Element
 	playing   bool
-	jpegs     chan []byte
+	jpegs     chan *bytes.Buffer
 	shutter   chan int
+	bp        *gst.BufferPool
 }
 
 func NewPlayer() (p *Player) {
 	p = &Player{}
-	p.jpegs = make(chan []byte, 10) //this is queue for 10 jpeg images
+	p.jpegs = make(chan *bytes.Buffer, 10) //this is queue for 10 jpeg images
 	p.shutter = make(chan int, 1)
+	p.bp = gst.NewBufferPool(3)
 	return p
 }
 
@@ -83,7 +87,7 @@ func (p *Player) TakePicture() {
 func (p *Player) PictureTaker(saveToDir string) (err error) {
 
 	var (
-		s *gst.Sample
+		s *bytes.Buffer
 		n int
 	)
 	go p.jpegSaver(saveToDir) //start save in separate thread to balance load
@@ -97,10 +101,18 @@ func (p *Player) PictureTaker(saveToDir string) (err error) {
 			break
 		}
 
-		s, err = p.photoSink.PullSampleOrSkip(n == 0) // if no samples to take just skip
+		if n == 0 {
+			err = p.photoSink.PullSampleBB(nil) // if no samples to take just skip
+		} else {
+			s = p.bp.Get()
+			err = p.photoSink.PullSampleBB(s)
+			//log.Printf("len(s)=%d cap(s)=%d", s.Len(), s.Cap())
+		}
+
 		if err != nil {
 			if err == gst.EOS && p.playing == false { //if pipeline is paused
 				//TODO:  we should not call pull!
+				runtime.Gosched()
 				continue
 			} else {
 				break
@@ -111,7 +123,7 @@ func (p *Player) PictureTaker(saveToDir string) (err error) {
 			//log.Printf("samples %d", n)
 			//log.Printf("image size %d", len(s.Data))
 			select {
-			case p.jpegs <- s.Data: //send image to jpegSaver()
+			case p.jpegs <- s: //send image to jpegSaver()
 				n -= 1
 			default:
 				err = errors.New("Something bad in PictureTaker")
@@ -126,12 +138,14 @@ func (p *Player) jpegSaver(dir string) error {
 	for jpg := range p.jpegs {
 		fullpath := filepath.Join(dir, buildFileName())
 		fd, err := os.Create(fullpath)
+		log.Println(fullpath)
 		if err != nil {
 			log.Print(err)
 			return err
 		}
-		fd.Write(jpg)
+		fd.Write(jpg.Bytes())
 		fd.Close()
+		p.bp.Put(jpg)
 	}
 	return nil
 }
