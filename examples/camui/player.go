@@ -85,11 +85,11 @@ func (p *Player) TakePicture() {
 
 //This routine pulls gstreamer pipeline and save a number of images on demand
 func (p *Player) PictureTaker(saveToDir string) (err error) {
-
 	var (
-		s *bytes.Buffer
-		n int
+		sampleData *bytes.Buffer
+		n          int
 	)
+
 	go p.jpegSaver(saveToDir) //start save in separate thread to balance load
 
 	for {
@@ -102,16 +102,15 @@ func (p *Player) PictureTaker(saveToDir string) (err error) {
 		}
 
 		if n == 0 {
-			err = p.photoSink.PullSampleBB(nil) // if no samples to take just skip
+			sampleData = nil // if no samples we need to take, just skip
 		} else {
-			s = p.bp.Get()
-			err = p.photoSink.PullSampleBB(s)
-			//log.Printf("len(s)=%d cap(s)=%d", s.Len(), s.Cap())
+			sampleData = p.bp.Get()
 		}
 
+		err = p.photoSink.PullSampleBB(sampleData)
 		if err != nil {
 			if err == gst.EOS && p.playing == false { //if pipeline is paused
-				//TODO:  we should not call pull!
+				//we should not call too often in such case
 				runtime.Gosched()
 				continue
 			} else {
@@ -120,13 +119,11 @@ func (p *Player) PictureTaker(saveToDir string) (err error) {
 		}
 
 		if n != 0 {
-			//log.Printf("samples %d", n)
-			//log.Printf("image size %d", len(s.Data))
 			select {
-			case p.jpegs <- s: //send image to jpegSaver()
+			case p.jpegs <- sampleData: //send image to jpegSaver()
 				n -= 1
 			default:
-				err = errors.New("Something bad in PictureTaker")
+				err = errors.New("Picture queue if fl!")
 				log.Println(err.Error())
 			}
 		}

@@ -412,7 +412,10 @@ func (e *Element) PushBufferAsync(buffer []byte) error {
 	return nil
 }
 
-//Pulls sanple to keep pipe run, but if skeep doesn't  copy it just unref() and returns nil
+//Pulls sample from the pipeline into *bytes.Buffer.
+// To keep pipe running and don't exost memory,  we need to pull samples. But if  we
+// doesn't nee them, we may pass nil to the function. In this case sample won't be  copied,
+// function  just unref() it  and returns nil error.
 func (e *Element) PullSampleBB(bb *bytes.Buffer) (err error) {
 	//All rendered buffers will be put in a queue so that the application can pull samples at its own rate.
 	// Note that when the application does not pull samples fast enough, the queued buffers
@@ -430,7 +433,7 @@ func (e *Element) PullSampleBB(bb *bytes.Buffer) (err error) {
 	}
 	defer C.gst_sample_unref(CGstSample) //it should work fast for go 1.14 due to defer inlining
 
-	//Do we need this sample right now?
+	//Do we need this sample at all?
 	if bb == nil {
 		return
 	}
@@ -440,10 +443,9 @@ func (e *Element) PullSampleBB(bb *bytes.Buffer) (err error) {
 		err = errors.New("could not gst_sample_get_buffer() from appsink")
 		return
 	}
-
-	var mspInfoBuf [C.sizeof_GstMapInfo]byte //to avoid malloc, but use stack, it's about 2-3 times faster
+	//To avoid malloc, but use stack, it's about 2-3 times faster
+	var mspInfoBuf [C.sizeof_GstMapInfo]byte
 	mapInfo := (*C.GstMapInfo)(unsafe.Pointer(&mspInfoBuf[0]))
-
 	if int(C.X_gst_buffer_map(gstBuffer, mapInfo)) == 0 {
 		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
 		return
@@ -452,6 +454,5 @@ func (e *Element) PullSampleBB(bb *bytes.Buffer) (err error) {
 
 	CData := (*[1 << 30]byte)(unsafe.Pointer(mapInfo.data))
 	bb.Write(CData[:mapInfo.size])
-
 	return
 }
