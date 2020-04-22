@@ -1,68 +1,87 @@
 package main
 
 import (
-	"bytes"
-	"errors"
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync/atomic"
 	"time"
 
 	"github.com/bksworm/gst"
-
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/pkg/errors"
 )
 
-const wigetName = "sinkWidget"
-const photoSink = "photoSink"
+const (
+	wigetName     = "sinkWidget"
+	photoSinkName = "photo_sink"
+	movieSinkName = "movie_sink"
+	QUEUE_SIZE    = 10
+)
 
 type Player struct {
 	pipe      *gst.Pipeline
 	widget    *gtk.Widget
-	photoSink *gst.Element
+	photoSink *FrameSink
+	movieSink *FrameSink
 	playing   bool
-	jpegs     chan *bytes.Buffer
-	shutter   chan int
-	bp        *gst.BufferPool
 }
 
 func NewPlayer() (p *Player) {
 	p = &Player{}
-	p.jpegs = make(chan *bytes.Buffer, 10) //this is queue for 10 jpeg images
-	p.shutter = make(chan int, 1)
-	p.bp = gst.NewBufferPool(3)
 	return p
 }
 
 func (p *Player) Assemble() (err error) {
+	//	p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
+	//		"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
+	//		" t. ! queue !  videoconvert ! video/x-raw,format=I420  " +
+	//		" !  tee name=u ! queue ! jpegenc !  appsink name= " + photoSink + " u. " +
+	//		" ! queue !   appsink name= " + movieSink)
+
+	// pipelineStr := fmt.Sprintf("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! "+
+	// 	"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=\"%s\" "+
+	// 	" t. ! queue !   jpegenc !  appsink name=\"%s\"", wigetName, photoSink)
+
 	p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
 		"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
-		" t. ! queue !   jpegenc !  appsink name= " + photoSink)
+		" t. ! queue !   jpegenc !  appsink name= " + photoSinkName)
 
 	if err != nil {
-		return fmt.Errorf("pipeline: %w", err)
+		return errors.Wrap(err, "player")
 	}
 
 	sink := p.pipe.GetByName(wigetName)
 	if sink == nil {
-		return fmt.Errorf("pipeline: %w", errors.New("sink with name "+wigetName+" not found"))
+		err = errors.Wrap(errors.Errorf(" sink %s not found ", wigetName), "player")
+		return err
 	}
 
 	p.widget, err = getWidget(sink)
 	if err != nil {
-		log.Println("Cann't get move area widget!")
-		return fmt.Errorf("pipeline: %s", err.Error())
+		//log.Println("Cann't get move area widget!")
+		return errors.Wrap(err, "player")
 	}
-	p.photoSink = p.pipe.GetByName(photoSink)
+
+	gstPhotoSink := p.pipe.GetByName(photoSinkName)
 	if p.photoSink == nil {
-		err = fmt.Errorf("pipeline:  sink %s not found ", photoSink)
-		log.Println(err.Error())
+		err = errors.Wrap(errors.Errorf(" sink %s not found ", photoSinkName), "player")
+		//log.Println(err.Error())
 		return
 	}
+	p.photoSink = NewFrameSink(gstPhotoSink, QUEUE_SIZE)
+
+	// gstMovieSink := p.pipe.GetByName(movieSink)
+	// if p.movieSink == nil {
+	// 	err = fmt.Errorf("pipeline:  sink %s not found ", movieSink)
+	// 	log.Println(err.Error())
+	// 	return
+	// }
+	// p.movieSink = NewFrameSink(gstMovieSink, QUEUE_SIZE)
+
 	return err
 }
 
@@ -85,63 +104,23 @@ func (p *Player) Close() {
 	p.pipe.SetState(gst.StateNull)
 	p.playing = false
 }
+
 func (p *Player) TakePicture() {
 	if p.playing {
 		//it will save 3 samples in a row
-		p.shutter <- 3
+		p.photoSink.PullCtrl(3)
 	}
 }
 
 //This routine pulls gstreamer pipeline and save a number of images on demand
-func (p *Player) PictureTaker(saveToDir string) (err error) {
-	var (
-		sampleData *bytes.Buffer
-		n          int
-	)
+func (p *Player) PictureTaker(ctx context.Context, saveToDir string) (err error) {
 
-	go p.jpegSaver(saveToDir) //start save in separate thread to balance load
-
-	for {
-		//we have to read number of shutts here to avoid races
-		select {
-		case n = <-p.shutter:
-			log.Printf("%d samples to take ", n)
-		default:
-			break
-		}
-
-		if n == 0 {
-			sampleData = nil // if no samples we need to take, just skip
-		} else {
-			sampleData = p.bp.Get()
-		}
-
-		err = p.photoSink.PullSampleBB(sampleData)
-		if err != nil {
-			if err == gst.EOS && p.playing == false { //if pipeline is paused
-				//we should not call too often in such case
-				runtime.Gosched()
-				continue
-			} else {
-				break
-			}
-		}
-
-		if n != 0 {
-			select {
-			case p.jpegs <- sampleData: //send image to jpegSaver()
-				n -= 1
-			default:
-				err = errors.New("Picture queue if fl!")
-				log.Println(err.Error())
-			}
-		}
-	}
-	return
+	go p.jpegSaver(ctx, saveToDir)
+	return p.photoSink.Pull(ctx)
 }
 
-func (p *Player) jpegSaver(dir string) error {
-	for jpg := range p.jpegs {
+func (p *Player) jpegSaver(ctx context.Context, dir string) error {
+	for jpg := range p.photoSink.frames {
 		fullpath := filepath.Join(dir, buildFileName())
 		fd, err := os.Create(fullpath)
 		log.Println(fullpath)
@@ -151,7 +130,7 @@ func (p *Player) jpegSaver(dir string) error {
 		}
 		fd.Write(jpg.Bytes())
 		fd.Close()
-		p.bp.Put(jpg)
+		p.photoSink.Return(jpg)
 	}
 	return nil
 }
@@ -174,13 +153,13 @@ func getWidget(e *gst.Element) (w *gtk.Widget, err error) {
 	obj := glib.Take(e.AsObj())
 	p, err := obj.GetProperty("widget")
 	if err != nil {
-		return w, errors.New("Element doesn't have  widget property!")
+		return w, errors.Wrap(err, "player")
 	}
 
 	ip := p.(interface{})
 	w, ok = ip.(*gtk.Widget)
 	if !ok {
-		return w, errors.New("It is not a *gtk.Widget")
+		return w, errors.Wrap(errors.New("It is not a *gtk.Widget"), "player")
 	}
 	return w, err
 }

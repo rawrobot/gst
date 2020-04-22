@@ -1,13 +1,14 @@
 package main
 
 import (
-	"errors"
+	"context"
 	"log"
 	"os"
 
 	"github.com/bksworm/gst"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/pkg/errors"
 )
 
 const appId = "com.github.bksworm.gst.videorec"
@@ -15,11 +16,13 @@ const appId = "com.github.bksworm.gst.videorec"
 type CamUiApp struct {
 	application *gtk.Application
 	player      *Player
+	ctx         context.Context
 }
 
 func NewCamUiApp() (app *CamUiApp, err error) {
 	app = &CamUiApp{}
 	app.application, err = gtk.ApplicationNew(appId, glib.APPLICATION_FLAGS_NONE)
+	app.ctx = context.Background()
 	return
 }
 
@@ -101,7 +104,7 @@ func (ca *CamUiApp) onActivate() {
 
 	builder.ConnectSignals(signals)
 
-	go p.PictureTaker("./out")
+	go p.PictureTaker(ca.ctx, "./out")
 	ca.player = p
 
 	ca.application.AddWindow(win)
@@ -146,8 +149,8 @@ func isBox(obj glib.IObject) (*gtk.Box, error) {
 }
 func errorCheck(e error) {
 	if e != nil {
-		// panic for any errors.
-		log.Panic(e)
+		//fmt.Printf("%+v", e)                //with frame
+		log.Panic(e) //panic for any errors.
 	}
 }
 

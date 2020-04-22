@@ -4,7 +4,7 @@ import (
 	"errors"
 	"log"
 
-	gst "github.com/bksworm/gst-1"
+	gst "github.com/bksworm/gst"
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"

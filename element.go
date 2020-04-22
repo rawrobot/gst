@@ -456,3 +456,11 @@ func (e *Element) PullSampleBB(bb *bytes.Buffer) (err error) {
 	bb.Write(CData[:mapInfo.size])
 	return
 }
+
+func (e *Element) GetState() StateOptions {
+	var gstStateBuf [C.sizeof_GstState]byte
+	pState := (*C.GstState)(unsafe.Pointer(&gstStateBuf[0]))
+
+	C.gst_element_get_state(e.GstElement, pState, nil, C.GST_CLOCK_TIME_NONE)
+	return StateOptions(*pState)
+}

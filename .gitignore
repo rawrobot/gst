@@ -15,8 +15,15 @@
 # Dependency directories (remove the comment below to include it)
 vendor/
 examples/camui/out
+.settings/
 
 #files
 go.sum
 examples/camui/camui
 examples/videorecui/videorec
+examples/videorecui/videorecui
+.project
+examples/noise/noise
+gst.sublime-project
+gst.sublime-workspace
+
