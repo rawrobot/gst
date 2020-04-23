@@ -48,7 +48,7 @@ func (p *Player) Assemble() (err error) {
 
 	p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
 		"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
-		" t. ! queue !   jpegenc !  appsink name= " + photoSinkName)
+		" t. ! queue !   jpegenc !  appsink name=photo_sink ") //+ photoSinkName)
 
 	if err != nil {
 		return errors.Wrap(err, "player")
