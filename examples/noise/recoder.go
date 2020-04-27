@@ -31,7 +31,7 @@ func (vrec *VideoRec) Assamble() (err error) {
 	cmd := fmt.Sprintf("appsrc name=%s  stream-type=0 format=time is-live=true do-timestamp=true "+
 		" !  video/x-raw,width=320,height=240,format=RGB,framerate=25/1 "+
 		" !  videoconvert ! video/x-raw,format=I420 "+
-		" !  matroskamux ! filesink location=appsrc.mkv", frameSrc)
+		" ! x264enc !  matroskamux ! filesink location=appsrc.mkv", frameSrc)
 	//" ! jpegenc ! multipartmux  ! filesink location=multipart.mjpeg ", frameSrc)
 	log.Println(cmd)
 	vrec.pipe, err = gst.ParseLaunch(cmd)

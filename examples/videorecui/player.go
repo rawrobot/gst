@@ -16,17 +16,18 @@ import (
 )
 
 const (
-	wigetName     = "sinkWidget"
-	photoSinkName = "photo_sink"
-	movieSinkName = "movie_sink"
-	QUEUE_SIZE    = 10
+	wigetName        = "sinkWidget"
+	photoSinkName    = "photo_sink"
+	movieSinkName    = "movie_sink"
+	QUEUE_SIZE       = 10
+	playerAsErrCause = "player"
 )
 
 type Player struct {
 	pipe      *gst.Pipeline
 	widget    *gtk.Widget
 	photoSink *FrameSink
-	movieSink *FrameSink
+	rec       *VideoRec
 	playing   bool
 }
 
@@ -35,52 +36,52 @@ func NewPlayer() (p *Player) {
 	return p
 }
 
-func (p *Player) Assemble() (err error) {
-	//	p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
-	//		"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
-	//		" t. ! queue !  videoconvert ! video/x-raw,format=I420  " +
-	//		" !  tee name=u ! queue ! jpegenc !  appsink name= " + photoSink + " u. " +
-	//		" ! queue !   appsink name= " + movieSink)
-
-	// pipelineStr := fmt.Sprintf("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! "+
-	// 	"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=\"%s\" "+
-	// 	" t. ! queue !   jpegenc !  appsink name=\"%s\"", wigetName, photoSink)
-
-	p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
+const (
+	CMD = "v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
 		"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
-		" t. ! queue !   jpegenc !  appsink name=photo_sink ") //+ photoSinkName)
+		" t. ! queue !  videoconvert ! video/x-raw,format=I420  " +
+		" !  tee name=u ! queue ! jpegenc !  appsink name=" + photoSinkName + " u. " +
+		" ! queue !   appsink name=" + movieSinkName +
+		" appsrc name=" + movieSrcName + "  stream-type=0 format=time is-live=true do-timestamp=true " +
+		"  ! video/x-raw,width=640,height=480,format=I420,framerate=30/1" +
+		"  ! x264enc !  matroskamux ! filesink location=video.mkv"
+		//" ! jpegenc !  multipartmux ! filesink location=video.mjpeg "
+		//" ! x264enc !  splitmuxsink muxer=matroskamux location=video%02d.mkv " +
+		//" max-size-time=10000000000 max-size-bytes=1000000"
+
+	CMD0 = "v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
+		"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
+		" t. ! queue !   jpegenc !  appsink name=" + photoSinkName
+)
+
+func (p *Player) Assemble() (err error) {
+	cmd := CMD
+	p.pipe, err = gst.ParseLaunch(cmd)
+
+	// p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
+	// 	"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
+	// 	" t. ! queue !   jpegenc !  appsink name= " + photoSink)
 
 	if err != nil {
-		return errors.Wrap(err, "player")
+		return errors.Wrap(err, playerAsErrCause)
 	}
+	log.Println(cmd)
 
 	sink := p.pipe.GetByName(wigetName)
 	if sink == nil {
-		err = errors.Wrap(errors.Errorf(" sink %s not found ", wigetName), "player")
-		return err
+		return errors.Wrap(errors.Errorf("element %s not found", wigetName), playerAsErrCause)
 	}
 
 	p.widget, err = getWidget(sink)
 	if err != nil {
-		//log.Println("Cann't get move area widget!")
-		return errors.Wrap(err, "player")
+		return errors.Wrap(err, playerAsErrCause)
 	}
 
-	gstPhotoSink := p.pipe.GetByName(photoSinkName)
-	if p.photoSink == nil {
-		err = errors.Wrap(errors.Errorf(" sink %s not found ", photoSinkName), "player")
-		//log.Println(err.Error())
-		return
+	e := p.pipe.GetByName(photoSinkName)
+	if e == nil {
+		return errors.Wrap(errors.Errorf("element %s not found", photoSinkName), playerAsErrCause)
 	}
-	p.photoSink = NewFrameSink(gstPhotoSink, QUEUE_SIZE)
-
-	// gstMovieSink := p.pipe.GetByName(movieSink)
-	// if p.movieSink == nil {
-	// 	err = fmt.Errorf("pipeline:  sink %s not found ", movieSink)
-	// 	log.Println(err.Error())
-	// 	return
-	// }
-	// p.movieSink = NewFrameSink(gstMovieSink, QUEUE_SIZE)
+	p.photoSink = NewFrameSink(e, QUEUE_SIZE)
 
 	return err
 }
@@ -95,14 +96,22 @@ func (p *Player) Pause() {
 	p.playing = false
 }
 
-func (p *Player) Stop() {
-	p.pipe.SetState(gst.StateReady)
-	p.playing = false
+func (p *Player) StartRecording() {
+	if p.playing {
+		p.rec.PullCtrl(-1)
+	}
+}
+
+func (p *Player) StopRecording() {
+	if p.playing {
+		p.rec.PullCtrl(0)
+	}
 }
 
 func (p *Player) Close() {
 	p.pipe.SetState(gst.StateNull)
 	p.playing = false
+	p.photoSink.Close()
 }
 
 func (p *Player) TakePicture() {
@@ -114,9 +123,14 @@ func (p *Player) TakePicture() {
 
 //This routine pulls gstreamer pipeline and save a number of images on demand
 func (p *Player) PictureTaker(ctx context.Context, saveToDir string) (err error) {
-
 	go p.jpegSaver(ctx, saveToDir)
 	return p.photoSink.Pull(ctx)
+}
+
+//This routine pulls gstreamer pipeline and save a movie
+func (p *Player) MovieMaker(ctx context.Context, saveToDir string) (err error) {
+	p.rec = NewVideoRec()
+	return p.rec.Start(ctx, p.pipe)
 }
 
 func (p *Player) jpegSaver(ctx context.Context, dir string) error {

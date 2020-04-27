@@ -1,8 +1,6 @@
 package gst
 
 import (
-	"fmt"
-	"runtime"
 	"testing"
 	"unsafe"
 
@@ -47,8 +45,6 @@ func BenchmarkIT(b *testing.B) {
 	s := &MemoryTS{bench: b}
 	testsuite.Bench(b, s)
 }
-
-
 
 //THERE ARE TESTS
 

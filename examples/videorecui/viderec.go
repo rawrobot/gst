@@ -71,6 +71,7 @@ func (ca *CamUiApp) onActivate() {
 
 	p := NewPlayer()
 	err = p.Assemble()
+
 	errorCheck(err)
 	//get container for the gtksink widget
 	obj, err = builder.GetObject("top_box")
@@ -85,26 +86,29 @@ func (ca *CamUiApp) onActivate() {
 		log.Println("Play")
 		p.Play()
 	}
-	signals["on_stop_btn_clicked"] = func() {
+	signals["on_pause_show_btn_clicked"] = func() {
 		log.Println("Pause")
 		p.Pause()
 	}
-	signals["on_photo_btn_clicked"] = func() {
-		log.Println("Take picture")
-		p.TakePicture()
+	signals["on_record_btn_clicked"] = func() {
+		log.Println("Start recording")
+		err := p.rec.PullCtrl(-1)
+		if err != nil {
+			log.Println(err.Error())
+		}
 	}
-	signals["on_photo_btn_clicked"] = func() {
-		log.Println("Take picture")
-		p.TakePicture()
-	}
-	signals["on_photo_btn_clicked"] = func() {
-		log.Println("Take picture")
-		p.TakePicture()
+	signals["on_stop_recording_btn_clicked"] = func() {
+		log.Println("Stop recording")
+		err := p.rec.PullCtrl(0)
+		if err != nil {
+			log.Println(err.Error())
+		}
 	}
 
 	builder.ConnectSignals(signals)
 
 	go p.PictureTaker(ca.ctx, "./out")
+	p.MovieMaker(ca.ctx, "./out")
 	ca.player = p
 
 	ca.application.AddWindow(win)
@@ -114,8 +118,6 @@ func (ca *CamUiApp) onActivate() {
 
 func (ca *CamUiApp) onQuitButton(obj *gtk.Button) {
 	log.Println("onQuitButton")
-	//log.Printf("obj %#v", obj)
-	//log.Printf("ca %#v", ca)
 	ca.application.Quit()
 }
 func main() {
@@ -149,8 +151,8 @@ func isBox(obj glib.IObject) (*gtk.Box, error) {
 }
 func errorCheck(e error) {
 	if e != nil {
-		//fmt.Printf("%+v", e)                //with frame
-		log.Panic(e) //panic for any errors.
+		log.Printf("%v", e) //with frame
+		os.Exit(-1)
 	}
 }
 

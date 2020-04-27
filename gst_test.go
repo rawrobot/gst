@@ -153,3 +153,32 @@ func TestCheckPlugins(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestPipeline2Names(t *testing.T) {
+
+	PrintMemUsage()
+
+	pipeline, err := ParseLaunch("videotestsrc  ! capsfilter name=filter1 ! capsfilter name=filter2! autovideosink")
+
+	if err != nil {
+		t.Error("pipeline create error", err)
+		t.FailNow()
+	}
+
+	fmt.Println(pipeline.Name())
+
+	element1 := pipeline.GetByName("filter1")
+	if element1 == nil {
+		t.Error("pipe find element error filter1")
+	}
+
+	element2 := pipeline.GetByName("filter2")
+	if element2 == nil {
+		t.Error("pipe find element error filter2")
+	}
+
+	PrintMemUsage()
+
+	time.Sleep(1000000)
+
+}
