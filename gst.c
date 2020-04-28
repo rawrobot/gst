@@ -49,6 +49,10 @@ void X_gst_g_object_set_uint(GstElement *e, const gchar* p_name, guint p_value) 
   g_object_set(G_OBJECT(e), p_name, p_value, NULL);
 }
 
+void X_gst_g_object_set_uint64(GstElement *e, const gchar* p_name, guint64 p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
 void X_gst_g_object_set_bool(GstElement *e, const gchar* p_name, gboolean p_value) {
   g_object_set(G_OBJECT(e), p_name, p_value, NULL);
 }
@@ -190,20 +194,20 @@ GstClockTime X_gst_pipeline_get_delay(GstElement* element) {
 
 
 GstClockTime X_gst_pipeline_get_latency(GstElement* element) {
-  return gst_pipeline_get_latency(GST_PIPELINE(element));
+    return gst_pipeline_get_latency(GST_PIPELINE(element));
 }
 
 void X_gst_pipeline_set_latency(GstElement* element, GstClockTime clockTime) {
-  gst_pipeline_set_latency(GST_PIPELINE(element), clockTime);
+    gst_pipeline_set_latency(GST_PIPELINE(element), clockTime);
 }
 
 
 GstFlowReturn X_gst_app_src_push_buffer(GstElement* element, void *buffer,int len) {
-  
-  gpointer p = g_memdup(buffer, len);
-  GstBuffer *data = gst_buffer_new_wrapped(p, len);
-  
-  return gst_app_src_push_buffer(GST_APP_SRC(element), data);
+    GstFlowReturn ret ; 
+    gpointer p = g_memdup(buffer, len);
+    GstBuffer *data = gst_buffer_new_wrapped(p, len); 
+    ret  = gst_app_src_push_buffer(GST_APP_SRC(element), data);
+    return ret ;
 }
 
 GstClockTime X_gst_buffer_get_duration(GstBuffer* buffer) {

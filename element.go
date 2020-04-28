@@ -220,6 +220,8 @@ func (e *Element) SetObject(name string, value interface{}) {
 		C.X_gst_g_object_set_int(e.GstElement, cname, C.gint(value.(int)))
 	case uint32:
 		C.X_gst_g_object_set_uint(e.GstElement, cname, C.guint(value.(uint32)))
+	case uint64:
+		C.X_gst_g_object_set_uint64(e.GstElement, cname, C.guint64(value.(uint64)))
 	case bool:
 		var cvalue int
 		if value.(bool) == true {
@@ -464,4 +466,21 @@ func (e *Element) GetState() StateOptions {
 
 	C.gst_element_get_state(e.GstElement, pState, nil, C.GST_CLOCK_TIME_NONE)
 	return StateOptions(*pState)
+}
+
+func (e *Element) PushBB(data *bytes.Buffer) (err error) {
+
+	buf := data.Bytes()
+	b := (unsafe.Pointer(&buf[0]))
+
+	var gstReturn C.GstFlowReturn
+
+	gstReturn = C.X_gst_app_src_push_buffer(e.GstElement, b, C.int(data.Len()))
+
+	if gstReturn != C.GST_FLOW_OK {
+		err = errors.New("could not push buffer on appsrc element")
+		return
+	}
+
+	return
 }

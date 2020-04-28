@@ -87,6 +87,7 @@ FOR_EXIT:
 				runtime.Gosched()
 				continue
 			} else {
+				log.Println(err.Error())
 				break
 			}
 		}
@@ -101,6 +102,8 @@ FOR_EXIT:
 					n -= 1 // so we have taken one
 				}
 			default:
+				b.bp.Put(sampleData)
+				sampleData = nil
 				err = EFULL
 				log.Println(err.Error())
 			}
@@ -127,7 +130,7 @@ FOR_EXIT:
 			b.fp(frame)
 		}
 
-		err = b.src.PushBuffer(frame.Bytes())
+		err = b.src.PushBB(frame)
 		log.Printf("out %d", frame.Len())
 		b.bp.Put(frame)
 		if err != nil {

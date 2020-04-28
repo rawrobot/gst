@@ -59,3 +59,4 @@ extern void X_g_signal_connect_data(gpointer instance, const gchar *detailed_sig
 
 //added by BKSWORM
 extern gboolean x_push_buffer_async(GstElement *element, void *buffer,int len) ;
+extern void X_gst_g_object_set_uint64(GstElement *e, const gchar* p_name, guint64 p_value);
