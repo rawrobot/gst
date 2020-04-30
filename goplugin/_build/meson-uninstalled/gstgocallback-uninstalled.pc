@@ -1,9 +1,0 @@
-prefix=/home/k9/work/video/gst/goplugin/_build
-srcdir=/home/k9/work/video/gst/goplugin
-
-Name: gstgocallback
-Description: gstgocallback: gstgocallback
-Version: 1.16.2
-Requires.private: gstreamer-1.0
-Libs: -L${prefix}/ -lgstgocallback
-Cflags:-I${prefix}/ -I${srcdir}/

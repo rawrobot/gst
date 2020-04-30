@@ -1,5 +1,0 @@
-[options]
-prefix = /home/k9/.local
-
-[properties]
-
