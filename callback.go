@@ -1,20 +1,15 @@
 package gst
 
 /*
-#cgo pkg-config: gstreamer-1.0 gstreamer-video-1.0
+#cgo pkg-config: gstgocallback
 #cgo LDFLAGS: -L/.local/lib/x86_64-linux-gnu
 
-#include <gst/gst.h>
-#include <gst/video/video.h>
-#include <gst/base/gstbasetransform.h>
-#include <gst/video/gstvideofilter.h>
+#include "gst.h"
 */
 import "C"
 import (
 	"log"
 	"unsafe"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -22,30 +17,58 @@ const (
 	propName         = "callback"
 )
 
-type TransformIPCallback func(filter *C.GstVideoFilter, frame *C.GstVideoFrame) C.GstFlowReturn
+var pluginStore = map[uintptr]*Plugin{}
 
-// funcAddr returns function value fn executable code address.
-func funcAddr(fn interface{}) uintptr {
-	// emptyInterface is the header for an interface{} value.
-	type emptyInterface struct {
-		typ   uintptr
-		value *uintptr
-	}
-	e := (*emptyInterface)(unsafe.Pointer(&fn))
-	return *e.value
+type ChainCallback func(plugin *Plugin, pad *Pad, buf []byte) int
+
+type Plugin struct {
+	Element
+	onChain ChainCallback
 }
 
-func SetCallBack(name string, pl *Pipeline, fn interface{}) error {
-	e := pl.GetByName(name)
-	if e == nil {
-		return errors.Wrap(errors.Errorf("element %s not found", name), filterAsErrCause)
+//export go_callback_chain
+func go_callback_chain(CgstPad *C.GstPad, CgstElement *C.GstObject, buf *C.GstBuffer) C.GstFlowReturn {
+
+	mutex.Lock()
+	plugin := pluginStore[uintptr(unsafe.Pointer(CgstElement))]
+	mutex.Unlock()
+	if plugin == nil {
+		return C.GST_FLOW_ERROR
 	}
-	v := funcAddr(fn)
-	e.SetObject(propName, v)
-	return nil
+
+	callback := plugin.onChain
+	pad := &Pad{
+		pad: CgstPad,
+	}
+
+	var mspInfoBuf [C.sizeof_GstMapInfo]byte
+	mapInfo := (*C.GstMapInfo)(unsafe.Pointer(&mspInfoBuf[0]))
+	if int(C.X_gst_buffer_map(buf, mapInfo)) == 0 {
+		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
+		return C.GST_FLOW_ERROR
+	}
+	defer C.gst_buffer_unmap(buf, mapInfo)
+
+	var b []byte
+	ret := C.GstFlowReturn(callback(plugin, pad, b))
+
+	ret = C.X_gst_pad_push(CgstElement, buf)
+	return ret
 }
 
-func TestIPCallback(filter *C.GstVideoFilter, frame *C.GstVideoFrame) C.GstFlowReturn {
-	log.Panicln("++++++++++++++++++++++++++++")
+func (e *Plugin) SetOnChainCallback(callback ChainCallback) {
+	e.onChain = callback
+
+	callbackID := uintptr(unsafe.Pointer(e.GstElement))
+	mutex.Lock()
+	pluginStore[callbackID] = e
+	mutex.Unlock()
+	p := e.GetStaticPad("sink")
+
+	C.X_gst_pad_set_chain_function(p.pad)
+}
+
+func TestChainCallback(plugin *Plugin, pad *Pad, buf []byte) int {
+	log.Println("++++++++++++++++++++++++++++")
 	return 0
 }

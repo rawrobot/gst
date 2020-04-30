@@ -1,3 +1,6 @@
+#ifndef __GO__GST_H__
+#define __GO__GST_H__
+
 #include <stdlib.h>
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
@@ -7,7 +10,7 @@
 
 
 
-typedef struct ElementUserData {
+typedef struct ElementUserData{
     guint64 callbackId;
 } ElementUserData;
 
@@ -60,3 +63,8 @@ extern void X_g_signal_connect_data(gpointer instance, const gchar *detailed_sig
 //added by BKSWORM
 extern gboolean x_push_buffer_async(GstElement *element, void *buffer,int len) ;
 extern void X_gst_g_object_set_uint64(GstElement *e, const gchar* p_name, guint64 p_value);
+
+extern GstFlowReturn go_callback_chain(GstPad * pad, GstObject * parent, GstBuffer * buffer) ;
+extern void X_gst_pad_set_chain_function(GstPad * pad) ;
+extern GstFlowReturn X_gst_pad_push(GstObject * parent, GstBuffer * buffer) ;
+#endif

@@ -1,0 +1,11 @@
+# ninja log v5
+0	221	1588093014262004237	gstgocallback@sha/gstgocallback.c.o	6351fbf66a14eb65
+2	225	1588093296576202293	gstgocallback@sha/gstgocallback.c.o	6351fbf66a14eb65
+2	222	1588094681758847514	gstgocallback@sha/gstgocallback.c.o	6351fbf66a14eb65
+222	283	1588094681818848940	libgstgocallback.so	b0ebb4c164a89bbc
+283	836	0	meson-install	e113541451f9eb09
+1	225	1588105639388520586	gstgocallback@sha/gstgocallback.c.o	6351fbf66a14eb65
+225	288	1588105639452521967	libgstgocallback.so	b0ebb4c164a89bbc
+1	210	1588181050992369613	gstgocallback@sha/gstgocallback.c.o	6351fbf66a14eb65
+210	273	1588181051056371045	libgstgocallback.so	b0ebb4c164a89bbc
+273	843	0	meson-install	e113541451f9eb09

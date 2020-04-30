@@ -14,8 +14,13 @@
 
 # Dependency directories (remove the comment below to include it)
 vendor/
+
+#working and build  directories 
 examples/camui/out
 .settings/
+goplagin/_build
+videofilter/_build/
+
 
 #files
 go.sum

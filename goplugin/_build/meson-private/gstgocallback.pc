@@ -1,0 +1,10 @@
+prefix=/home/k9/.local
+libdir=${prefix}/lib/x86_64-linux-gnu
+includedir=${prefix}/include
+
+Name: gstgocallback
+Description: gstgocallback: gstgocallback
+Version: 1.16.2
+Requires.private: gstreamer-1.0
+Libs: -L${prefix}/lib/x86_64-linux-gnu/gstreamer-1.0 -lgstgocallback
+Cflags:-I${includedir}

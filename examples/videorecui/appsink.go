@@ -14,7 +14,7 @@ import (
 var (
 	EBUSY   = errors.New("Busy!")
 	EEMPTY  = errors.New("Empty!")
-	EFULL   = errors.New("Frame queue if full!")
+	EFULL   = errors.New("Frame queue is full!")
 	ECANCEL = errors.New("Cancel!")
 )
 
@@ -116,6 +116,7 @@ func (fs *FrameSink) Pull(ctx context.Context) (err error) {
 			default:
 				err = EFULL
 				log.Println(err.Error())
+				fs.bp.Put(sampleData)
 			}
 		}
 	}
