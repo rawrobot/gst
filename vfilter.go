@@ -24,11 +24,9 @@ type VideoFilter interface {
 
 type VideoFrame struct {
 	GstVideoFrame *C.GstVideoFrame
-	Pixels        *C.guint8
-	Stride        uint
-	PixelStride   uint
-	Height        int
-	Width         int
+	Format        int
+	NPlanes       int
+	Size          int
 }
 
 func (vfr *VideoFrame) InitData() bool {
@@ -37,25 +35,51 @@ func (vfr *VideoFrame) InitData() bool {
 	}
 	frame := vfr.GstVideoFrame
 
-	if C.gst_video_frame_map(frame, nil, nil, C.GST_MAP_WRITE) != 0 {
-		// vfr.Pixels = C.GST_VIDEO_FRAME_PLANE_DATA(frame, 0)
-		// vfr.Stride = C.GST_VIDEO_FRAME_PLANE_STRIDE(frame, 0)
-		// vfr.PixelStride = C.GST_VIDEO_FRAME_COMP_PSTRIDE(frame, 0)
-		// vfr.Height = C.GST_VIDEO_FRAME_COMP_HEIGHT(frame, 0)
-		// vfr.Width = C.GST_VIDEO_FRAME_COMP_WIDTH(frame, 0)
-	}
+	vfr.NPlanes = int(C.get_frame_n_planes(frame))
+	vfr.Size = int(frame.info.size)
+	vfr.Format = int(C.get_frame_format(frame))
+
 	return true
 }
 
-func (vfr *VideoFrame) Close() {
-	C.gst_video_frame_unmap(vfr.GstVideoFrame)
+func (vfr *VideoFrame) Plane(n int) (plane VideoFramePlane) {
+
+	frame := vfr.GstVideoFrame
+
+	//FIXME: n > vfr.NPlanes check
+
+	plane.Stride = int(C.get_frame_stride(frame, C.int(n)))
+	plane.PixelStride = int(C.get_frame_pixel_stride(frame, C.int(n)))
+	plane.Height = int(C.get_frame_h(frame, C.int(n)))
+	plane.Width = int(C.get_frame_w(frame, C.int(n)))
+	plane.Size = plane.PixelStride * plane.Width * plane.Height
+	plane.Pixels = nonCopyGoBytes(uintptr(unsafe.Pointer(C.get_frame_data(frame, C.int(n)))), plane.Size)
+	return plane
+}
+
+type VideoFramePlane struct {
+	Pixels      []byte
+	Size        int
+	Stride      int
+	PixelStride int
+	Height      int
+	Width       int
+}
+
+func (vfr *VideoFramePlane) Close() {
+	vfr.Pixels = nil
 }
 
 type VideoFilterPlugin struct {
 	Element
 }
 
-func (vfp *VideoFilterPlugin) TransformIP(frame *VideoFrame) error {
+func (vfp *VideoFilterPlugin) TransformIP(vf *VideoFrame) error {
+
+	// for i := 0; i < vf.NPlanes; i++ {
+	// 	p := vf.Plane(i)
+	// 	log.Printf("plane %d  %dx%d  size %d", i, p.Width, p.Height, p.Size)
+	// }
 	return nil
 }
 
@@ -66,7 +90,7 @@ func go_transform_frame_ip(filter *C.GstVideoFilter, frame *C.GstVideoFrame) (re
 	mutex.Lock()
 	plugin := videoFilterStore[callbackID]
 	mutex.Unlock()
-	log.Printf("object %x", callbackID)
+
 	if plugin == nil {
 		return C.GST_FLOW_ERROR
 	}
@@ -74,13 +98,10 @@ func go_transform_frame_ip(filter *C.GstVideoFilter, frame *C.GstVideoFrame) (re
 	vf := &VideoFrame{
 		GstVideoFrame: frame,
 	}
-
-	if false == vf.InitData() {
-		return C.GST_FLOW_ERROR
-	}
-	defer vf.Close()
+	vf.InitData()
 
 	err := plugin.TransformIP(vf)
+
 	if err != nil {
 		ret = C.GST_FLOW_ERROR
 	}
@@ -111,3 +132,5 @@ func funcAddr(fn interface{}) uintptr {
 	e := (*emptyInterface)(unsafe.Pointer(&fn))
 	return *e.value
 }
+
+//https://eli.thegreenplace.net/2019/passing-callbacks-and-pointers-to-cgo/

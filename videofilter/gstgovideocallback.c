@@ -75,11 +75,11 @@ enum
 
 /* FIXME: add/remove formats you can handle */
 #define VIDEO_SRC_CAPS \
-    GST_VIDEO_CAPS_MAKE("{ I420, Y444, Y42B, UYVY, RGBA }")
+    GST_VIDEO_CAPS_MAKE("{ I420, Y444, Y42B, UYVY, RGBA, GRAY8 }")
 
 /* FIXME: add/remove formats you can handle */
 #define VIDEO_SINK_CAPS \
-    GST_VIDEO_CAPS_MAKE("{ I420, Y444, Y42B, UYVY, RGBA }")
+    GST_VIDEO_CAPS_MAKE("{ I420, Y444, Y42B, UYVY, RGBA, GRAY8 }")
 
 
 /* class initialization */
@@ -141,21 +141,21 @@ void
 gst_govideocallback_set_property (GObject * object, guint property_id,
     const GValue * value, GParamSpec * pspec)
 {
-    guint64 v ;
   GstGoVideoCallback *govideocallback = GST_GOVIDEOCALLBACK (object);
-
   GST_DEBUG_OBJECT (govideocallback, "set_property");
 
   switch (property_id) {
-      case PROP_IP_CALLBACK:
-        v = g_value_get_uint64 (value) ;
-        GST_DEBUG_OBJECT (govideocallback, "set_property transform-ip-callback %"G_GUINT64_FORMAT " ",v);
-        govideocallback->ip_callback =  (gst_govideocallback_tarnsform_ip_t)v;
+      case PROP_IP_CALLBACK:{
+        gpointer pv = g_value_get_pointer (value) ;
+        //GST_DEBUG_OBJECT (govideocallback, "set_property transform-ip-callback %"G_GPOINTER_FORMAT " ",v);
+        govideocallback->ip_callback =  (gst_govideocallback_tarnsform_ip_t)pv;
+        }
       break; 
-      case PROP_CALLER_ID:
-    v = g_value_get_uint64 (value); 
+      case PROP_CALLER_ID:{
+        guint64 v = g_value_get_uint64 (value); 
        GST_DEBUG_OBJECT (govideocallback, "set_property caller-id %"G_GUINT64_FORMAT " ",v);
       govideocallback->caller_id = v ;
+        }
       break; 
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -173,7 +173,7 @@ gst_govideocallback_get_property (GObject * object, guint property_id,
 
   switch (property_id) {
       case PROP_IP_CALLBACK:
-         g_value_set_uint64 (value, (guint64)govideocallback->ip_callback);
+         g_value_set_pointer (value, (gpointer)govideocallback->ip_callback);
       break; 
     case PROP_CALLER_ID:
       g_value_set_uint64 (value, govideocallback->caller_id);
