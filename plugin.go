@@ -2,19 +2,13 @@ package gst
 
 /*
 #cgo pkg-config: gstgocallback
-#cgo LDFLAGS: -L/.local/lib/x86_64-linux-gnu
 
-#include "gst.h"
+#include "callback.h"
 */
 import "C"
 import (
 	"log"
 	"unsafe"
-)
-
-const (
-	filterAsErrCause = "videofilter"
-	propName         = "callback"
 )
 
 var pluginStore = map[uintptr]*Plugin{}
@@ -40,14 +34,6 @@ func go_callback_chain(CgstPad *C.GstPad, CgstElement *C.GstObject, buf *C.GstBu
 	pad := &Pad{
 		pad: CgstPad,
 	}
-
-	var mspInfoBuf [C.sizeof_GstMapInfo]byte
-	mapInfo := (*C.GstMapInfo)(unsafe.Pointer(&mspInfoBuf[0]))
-	if int(C.X_gst_buffer_map(buf, mapInfo)) == 0 {
-		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
-		return C.GST_FLOW_ERROR
-	}
-	defer C.gst_buffer_unmap(buf, mapInfo)
 
 	var b []byte
 	ret := C.GstFlowReturn(callback(plugin, pad, b))

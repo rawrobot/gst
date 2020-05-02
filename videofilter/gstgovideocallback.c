@@ -67,8 +67,8 @@ static GstFlowReturn gst_govideocallback_transform_frame_ip (GstVideoFilter * fi
 enum
 {
   PROP_0,
-  PROP_HORIZONTAL_SPEED,
-  PROP_IP_CALLBACK
+  PROP_IP_CALLBACK,
+  PROP_CALLER_ID
 };
 
 /* pad templates */
@@ -118,23 +118,23 @@ gst_govideocallback_class_init (GstGoVideoCallbackClass * klass)
   video_filter_class->transform_frame = NULL ; //GST_DEBUG_FUNCPTR (gst_govideocallback_transform_frame);
   video_filter_class->transform_frame_ip = GST_DEBUG_FUNCPTR (gst_govideocallback_transform_frame_ip);
 
- g_object_class_install_property (gobject_class, PROP_HORIZONTAL_SPEED,
-      g_param_spec_int ("horizontal-speed", "Horizontal Speed",
-          "Scroll image number of pixels per frame (positive is scroll to the left)",
-          G_MININT32, G_MAXINT32, DEFAULT_HORIZONTAL_SPEED,
-          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)); 
-
- g_object_class_install_property (gobject_class, PROP_IP_CALLBACK,
-      g_param_spec_uint64 ("callback", "Ip trasform callback",
+  g_object_class_install_property (gobject_class, PROP_IP_CALLBACK,
+      g_param_spec_pointer ("transform-ip-callback", "Ip trasform callback",
           "Go lang callback for ip transformation",
+          G_PARAM_READWRITE)) ; // |  G_PARAM_STATIC_STRINGS));  
+
+g_object_class_install_property (gobject_class, PROP_CALLER_ID,
+      g_param_spec_uint64 ("caller-id", "Ip trasform caller id",
+          "It's ID golang callback provider",
            0, G_MAXUINT64, 0, 
-          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));  
+          G_PARAM_READWRITE )) ;//| G_PARAM_STATIC_STRINGS));  
 
 }
 
 static void
 gst_govideocallback_init (GstGoVideoCallback *govideocallback)
 {
+   
 }
 
 void
@@ -149,10 +149,13 @@ gst_govideocallback_set_property (GObject * object, guint property_id,
   switch (property_id) {
       case PROP_IP_CALLBACK:
         v = g_value_get_uint64 (value) ;
-        govideocallback->ip_callback =  (gst_govideocallback_ip_t)v;
+        GST_DEBUG_OBJECT (govideocallback, "set_property transform-ip-callback %"G_GUINT64_FORMAT " ",v);
+        govideocallback->ip_callback =  (gst_govideocallback_tarnsform_ip_t)v;
       break; 
-      case PROP_HORIZONTAL_SPEED:
-      govideocallback->horizontal_speed = g_value_get_int (value);
+      case PROP_CALLER_ID:
+    v = g_value_get_uint64 (value); 
+       GST_DEBUG_OBJECT (govideocallback, "set_property caller-id %"G_GUINT64_FORMAT " ",v);
+      govideocallback->caller_id = v ;
       break; 
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -172,8 +175,8 @@ gst_govideocallback_get_property (GObject * object, guint property_id,
       case PROP_IP_CALLBACK:
          g_value_set_uint64 (value, (guint64)govideocallback->ip_callback);
       break; 
-    case PROP_HORIZONTAL_SPEED:
-      g_value_set_int (value, govideocallback->horizontal_speed);
+    case PROP_CALLER_ID:
+      g_value_set_uint64 (value, govideocallback->caller_id);
       break;  
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -252,7 +255,8 @@ static GstFlowReturn
 gst_govideocallback_transform_frame_ip (GstVideoFilter * filter, GstVideoFrame * frame)
 {
     GstGoVideoCallback *govideocallback = GST_GOVIDEOCALLBACK (filter);
-  GST_DEBUG_OBJECT (govideocallback, "transform_frame_ip");
+    GST_DEBUG_OBJECT (govideocallback, "transform_frame_ip");
+    GST_DEBUG_OBJECT(govideocallback, "caller-id %"G_GUINT64_FORMAT" ", (govideocallback->caller_id));
   /*
   GstVideoInfo * video_info= NULL;
   GstBuffer * video_buffer= NULL;

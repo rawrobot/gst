@@ -254,13 +254,3 @@ gboolean x_push_buffer_async(GstElement *element, void *buffer,int len) {
 
     return TRUE;
 }
-
-void X_gst_pad_set_chain_function(GstPad * pad) {
-     gst_pad_set_chain_function(pad, go_callback_chain);
-}
-
-GstFlowReturn 
-X_gst_pad_push(GstObject * parent, GstBuffer * buffer){
-      GstGoCallback * filter = GST_GOCALLBACK (parent);
-   return gst_pad_push( filter->srcpad, buffer) ;   
-}

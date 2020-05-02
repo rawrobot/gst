@@ -16,7 +16,6 @@ typedef struct ElementUserData{
 
 
 
-
 extern void go_callback_new_pad(GstElement *element,GstPad *pad, guint64 callbackId);
 
 
@@ -64,7 +63,4 @@ extern void X_g_signal_connect_data(gpointer instance, const gchar *detailed_sig
 extern gboolean x_push_buffer_async(GstElement *element, void *buffer,int len) ;
 extern void X_gst_g_object_set_uint64(GstElement *e, const gchar* p_name, guint64 p_value);
 
-extern GstFlowReturn go_callback_chain(GstPad * pad, GstObject * parent, GstBuffer * buffer) ;
-extern void X_gst_pad_set_chain_function(GstPad * pad) ;
-extern GstFlowReturn X_gst_pad_push(GstObject * parent, GstBuffer * buffer) ;
 #endif

@@ -5,6 +5,7 @@
 *.so
 *.dylib
 *.*~
+*.mkv
 
 # Test binary, built with `go test -c`
 *.test
@@ -17,8 +18,9 @@ vendor/
 
 #working and build  directories 
 examples/camui/out
+examples/videorecui/out
 .settings/
-goplagin/_build
+goplugin/_build
 videofilter/_build/
 
 
