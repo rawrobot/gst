@@ -8,18 +8,18 @@ package gst
 */
 import "C"
 import (
-	"log"
 	"unsafe"
 )
 
-var videoFilterStore = map[uintptr]VideoFilter{}
+var videoFilterStore = map[uintptr]VideoTransformIp{}
 
 const propertyName = "transform-ip-callback"
 const propCallerId = "caller-id"
 
-//type ChainCallback func(plugin *VideoFilter, pad *Pad, buf []byte) int
-type VideoFilter interface {
+type VideoTransformIp interface {
 	TransformIP(frame *VideoFrame) error
+	CallbackID() uintptr
+	GetElement() Element
 }
 
 type VideoFrame struct {
@@ -74,13 +74,17 @@ type VideoFilterPlugin struct {
 	Element
 }
 
-func (vfp *VideoFilterPlugin) TransformIP(vf *VideoFrame) error {
+func (vfp *VideoFilterPlugin) GetElement() Element {
+	return vfp.Element
+}
 
-	// for i := 0; i < vf.NPlanes; i++ {
-	// 	p := vf.Plane(i)
-	// 	log.Printf("plane %d  %dx%d  size %d", i, p.Width, p.Height, p.Size)
-	// }
+//"Pure virtual method :)
+func (vfp *VideoFilterPlugin) TransformIP(vf *VideoFrame) error {
 	return nil
+}
+
+func (vfp *VideoFilterPlugin) CallbackID() uintptr {
+	return uintptr(unsafe.Pointer(vfp.GstElement))
 }
 
 //export go_transform_frame_ip
@@ -109,16 +113,16 @@ func go_transform_frame_ip(filter *C.GstVideoFilter, frame *C.GstVideoFrame) (re
 	return ret
 }
 
-func (e *VideoFilterPlugin) SetCallback() {
+func SetVideoTransformIpCallback(vti VideoTransformIp) {
 
-	callbackID := uintptr(unsafe.Pointer(e.GstElement))
+	callbackID := vti.CallbackID()
 	mutex.Lock()
-	videoFilterStore[callbackID] = e
+	videoFilterStore[callbackID] = vti
 	mutex.Unlock()
-	log.Printf("object %x", callbackID)
-
-	C.X_go_set_callback_id(e.GstElement, C.guint64(callbackID))
-	C.X_go_set_callback_transform_ip(e.GstElement)
+	//log.Printf("object %T", vti)
+	e := vti.GetElement().GstElement
+	//C.X_go_set_callback_id(e, C.guint64(callbackID))
+	C.X_go_set_callback_transform_ip(e)
 }
 
 // funcAddr returns function value fn executable code address.

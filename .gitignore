@@ -6,6 +6,7 @@
 *.dylib
 *.*~
 *.mkv
+*.jpeg
 
 # Test binary, built with `go test -c`
 *.test
@@ -29,6 +30,7 @@ go.sum
 examples/camui/camui
 examples/videorecui/videorec
 examples/videorecui/videorecui
+examples/plugin/line/line
 .project
 examples/noise/noise
 gst.sublime-project
