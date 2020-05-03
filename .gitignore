@@ -5,6 +5,7 @@
 *.so
 *.dylib
 *.*~
+#examples outputs
 *.mkv
 *.jpeg
 
@@ -14,7 +15,7 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
+# Dependency directories 
 vendor/
 
 #working and build  directories 
@@ -25,14 +26,19 @@ goplugin/_build
 videofilter/_build/
 
 
-#files
-go.sum
+#examples'  exe files
 examples/camui/camui
 examples/videorecui/videorec
 examples/videorecui/videorecui
 examples/plugin/line/line
-.project
+examples/gtktsink/gtktsink
+examples/plugin/sobel/sobel
 examples/noise/noise
+
+go.sum
+
+#projects
+.project
 gst.sublime-project
 gst.sublime-workspace
 
