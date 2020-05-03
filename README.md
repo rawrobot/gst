@@ -1,6 +1,8 @@
 # gst
 
 It is a small and simple go gstreamer binding. It is a fork from https://github.com/notedit/gst
+Moreover it implements interface to gstreamer videofilter by intercepting xx_transform_ip() call. 
+
 
 ## Install
 
@@ -27,5 +29,12 @@ It shows video output from /dev/video0 at the gtk window.
 ### camui
 
 It does the same thing but may pause/resume the video stream and take snapshots from the camera.
+
+### plugin/line
+It is simple gstreamer "videofilter" example. It generates white box jpeg image with black line at the midle.
+
+### plugin/movingline
+This one shows video moving from up to down black line. 
+
 
 
