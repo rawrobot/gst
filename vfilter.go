@@ -16,10 +16,14 @@ var videoFilterStore = map[uintptr]VideoTransformIp{}
 const propertyName = "transform-ip-callback"
 const propCallerId = "caller-id"
 
-type VideoTransformIp interface {
-	TransformIP(frame *VideoFrame) error
+type Elementer interface {
 	CallbackID() uintptr
 	GetElement() Element
+}
+
+type VideoTransformIp interface {
+	Elementer
+	TransformIP(frame *VideoFrame) error
 }
 
 type VideoFrame struct {
@@ -138,3 +142,14 @@ func funcAddr(fn interface{}) uintptr {
 }
 
 //https://eli.thegreenplace.net/2019/passing-callbacks-and-pointers-to-cgo/
+
+type tSlice struct {
+	addr uintptr
+	len  int
+	cap  int
+}
+
+func MemSet(b []byte, v byte) {
+	slice := (*tSlice)(unsafe.Pointer(&b))
+	C.memset(unsafe.Pointer(slice.addr), C.int(v), C.size_t(slice.len))
+}

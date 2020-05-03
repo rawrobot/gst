@@ -2,13 +2,15 @@ package main
 
 import (
 	"log"
-	"time"
+	"os"
+	"os/signal"
 
 	"github.com/bksworm/gst"
 )
 
 type LinePlugin struct {
 	gst.VideoFilterPlugin
+	line int
 }
 
 func NewLinePlugin(e *gst.Element) *LinePlugin {
@@ -20,25 +22,20 @@ func NewLinePlugin(e *gst.Element) *LinePlugin {
 //draws horithontal black line at the midle of frame
 func (lp *LinePlugin) TransformIP(vf *gst.VideoFrame) error {
 
-	for i := 0; i < vf.NPlanes; i++ {
-		p := vf.Plane(i)
-		log.Printf("plane %d  %dx%d  size %d", i, p.Width, p.Height, p.Size)
-	}
-
 	y := vf.Plane(0)
-	p := y.Height / 2 * y.Stride * y.PixelStride
-
-	for w := 0; w < y.Width; w++ {
-		y.Pixels[p+w] = 0
+	p := lp.line * y.Stride * y.PixelStride
+	gst.MemSet(y.Pixels[p:p+y.Width], 0)
+	lp.line += 1
+	if lp.line >= y.Height {
+		lp.line = 0
 	}
-	//gst.MemSet(y.Pixels[p:p+y.Width], 0) is better way :)
 	return nil
 }
 
 func main() {
-	pipeline, err := gst.ParseLaunch("videotestsrc  pattern=white num-buffers=1 " +
+	pipeline, err := gst.ParseLaunch("videotestsrc  pattern=white  " +
 		" !  video/x-raw,format=I420,width=320,height=240,framerate=25/1 " +
-		" !  govideocallback name=gofilter ! jpegenc ! filesink location=line.jpeg")
+		" !  govideocallback name=gofilter ! autovideosink")
 
 	if err != nil {
 		log.Println("pipeline create error ", err.Error())
@@ -58,7 +55,16 @@ func main() {
 	gst.SetVideoTransformIpCallback(plugin)
 
 	pipeline.SetState(gst.StatePlaying)
-	time.Sleep(time.Second)
-	pipeline.SetState(gst.StateNull)
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		// Run Cleanup
+		pipeline.SetState(gst.StateNull)
+		os.Exit(0)
+	}()
+
+	select {}
 
 }
