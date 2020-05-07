@@ -2,7 +2,8 @@ package main
 
 import (
 	"image"
-	"image/color"
+	//"image/color"
+	"math"
 )
 
 var (
@@ -25,55 +26,42 @@ func FilterGrayIP(grayImg *image.Gray) {
 	max := grayImg.Bounds().Max
 	min := grayImg.Bounds().Min
 
-	/* filtered image must be two pixels shorter, because
-	there must be a row of pixels on each side of a pixel for the sobel operator
-	to work*/
-	//Copy source to work with, because we will modify incomeng image
+	//Copy source to work with, because we will modify incoming image
 	imgCopy := CopySubImage(grayImg, image.Rect(max.X, max.Y, min.X, min.Y))
+	/*
+		 Filtered image must be two pixels shorter, because
+		there must be a row of pixels on each side of a pixel for the sobel operator
+		to work
+	*/
 	width := max.X - 1 //to provide a "border" of 1 pixel
 	height := max.Y - 1
 
-	var v uint32
+	var sv uint
+	var v float64
 
 	for x := 1; x < width; x++ {
 		for y := 1; y < height; y++ {
-			fX, fY := applySobelFilter(imgCopy, x, y)
-			v = FloorSqrt((fX*fX)+(fY*fY)) + 1 // +1 to make it ceil
-			grayImg.SetGray(x, y, color.Gray{Y: uint8(v)})
+			sv = applySobelFilter(imgCopy, x, y)
+			//math.Sqrt works 30 times faster that
+			//https://www.geeksforgeeks.org/square-root-of-an-integer/
+			v = math.Sqrt(float64(sv))
+			//clip value
+			if v > 255.0 {
+				v = 255.0
+			} else if v < 0.0 {
+				v = 0.0
+			}
+			//grayImg.SetGray(x, y, color.Gray{Y: uint8(v)})
+			grayImg.Pix[grayImg.PixOffset(x-1, y-1)] = uint8(v)
 		}
 	}
 }
 
-func FilterGrayFast(grayImg *image.Gray) (filtered *image.Gray) {
-	max := grayImg.Bounds().Max
-	min := grayImg.Bounds().Min
-
-	/* filtered image must be two pixels shorter, because
-	there must be a row of pixels on each side of a pixel for the sobel operator
-	to work*/
-	filtered = image.NewGray(image.Rect(max.X-2, max.Y-2, min.X, min.Y))
-	width := max.X - 1 //to provide a "border" of 1 pixel
-	height := max.Y - 1
-
-	var v uint32
-
-	for x := 1; x < width; x++ {
-		for y := 1; y < height; y++ {
-			fX, fY := applySobelFilter(grayImg, x, y)
-			v = FloorSqrt((fX*fX)+(fY*fY)) + 1 // +1 to make it ceil
-			filtered.SetGray(x, y, color.Gray{Y: uint8(v)})
-		}
-	}
-
-	return filtered
-}
-
-func applySobelFilter(img *image.Gray, x int, y int) (uint32, uint32) {
+func applySobelFilter(img *image.Gray, x int, y int) uint {
 	var fX, fY, pixel, index int
 	curX := x - 1
 	curY := y - 1
 	for i := 0; i < kernelSize; i++ {
-		//index = i * kernelSize
 		for j := 0; j < kernelSize; j++ {
 			//it is unsafe but faster on 10% or so
 			pixel = int(img.Pix[img.PixOffset(curX, curY)])
@@ -85,7 +73,7 @@ func applySobelFilter(img *image.Gray, x int, y int) (uint32, uint32) {
 		curX = x - 1
 		curY++
 	}
-	return Abs(fX), Abs(fY)
+	return uint(fX*fX + fY*fY)
 }
 
 // SubImage returns an image representing the portion of the image p visible
@@ -106,53 +94,4 @@ func CopySubImage(p *image.Gray, r image.Rectangle) *image.Gray {
 	}
 	copy(img.Pix, p.Pix[i:])
 	return img
-}
-
-//unint32 math
-
-// Abs returns the absolute value of the given int.
-func Abs(x int) uint32 {
-	if x < 0 {
-		return uint32(-x)
-	} else {
-		return uint32(x)
-	}
-}
-
-//https://www.geeksforgeeks.org/square-root-of-an-integer/
-//Time Complexity: O(Log x)
-//Note: The Binary Search can be further optimized to start with ‘start’ = 0 and ‘end’ = x/2.
-//Floor of square root of x cannot be more than x/2 when x > 1.
-func FloorSqrt(x uint32) (ans uint32) {
-	// Base Cases
-	if x == 0 || x == 1 {
-		return x
-	}
-
-	// Do Binary Search for floor(sqrt(x))
-	var (
-		start uint32 = 0
-		mid   uint32
-	)
-	end := x / 2
-
-	for start <= end {
-		mid = (start + end) / 2
-
-		// If x is a perfect square
-		if mid*mid == x {
-			return mid
-		}
-
-		// Since we need floor, we update answer when mid*mid is
-		// smaller than x, and move closer to sqrt(x)
-		if mid*mid < x {
-
-			start = mid + 1
-			ans = mid
-		} else { // If mid*mid is greater than x
-			end = mid - 1
-		}
-	}
-	return ans
 }

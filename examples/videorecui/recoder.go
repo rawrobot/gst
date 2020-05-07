@@ -52,7 +52,6 @@ func (p *VideoRec) Start(ctx context.Context, pipe *gst.Pipeline) (err error) {
 	}
 	p.bridge = NewBridge(p.in, p.out, QUEUE_SIZE)
 	p.bridge.ConnectPipes(ctx)
-	//p.PullCtrl(-1)
 
 	return err
 }

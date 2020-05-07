@@ -38,11 +38,11 @@ func main() {
 	// If you like to see youself
 	// pipeline, err := gst.ParseLaunch("v4l2src device=/dev/video0 ! video/x-raw,width=320,height=240 " +
 	// 	" ! videoconvert  " +
-	// 	" !  video/x-raw,format=I420,width=320,height=240 " +
+	// 	" !  video/x-raw,format=GRAY8,width=320,height=240 " +
 	// 	" !  govideocallback name=gofilter ! autovideosink")
 
 	pipeline, err := gst.ParseLaunch("videotestsrc pattern=ball " +
-		" !  video/x-raw,format=I420,width=640,height=480 " +
+		" !  video/x-raw,format=I420,width=320,height=240 " +
 		" !  govideocallback name=gofilter ! autovideosink")
 
 	if err != nil {

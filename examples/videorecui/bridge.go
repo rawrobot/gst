@@ -62,7 +62,7 @@ func (b *Bridge) in(ctx context.Context) (err error) {
 
 FOR_EXIT:
 	for {
-		//we have to read number of shutts here to avoid races
+		//we have to read number of frames here to avoid races
 		select {
 		case n = <-b.shutter:
 			log.Printf("%d samples to take ", n)
@@ -97,7 +97,7 @@ FOR_EXIT:
 			case b.frames <- sampleData: //send image to jpegSaver()
 				log.Printf("in  %d", sampleData.Len())
 				if n > 0 {
-					// n > 0 means a number of shuts we need
+					// n > 0 means a number of frames we need
 					// n == -1 we make a movie
 					n -= 1 // so we have taken one
 				}
