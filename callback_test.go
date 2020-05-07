@@ -88,7 +88,7 @@ func TestVFCallbackSet(t *testing.T) {
 		Element: *element,
 	}
 
-	plugin.SetCallback()
+	SetVideoTransformIpCallback(plugin)
 
 	pipeline.SetState(StatePlaying)
 	time.Sleep(10000000)

@@ -1,7 +1,7 @@
 package gst
 
 /*
-#cgo pkg-config: gstgocallback
+#cgo pkg-config: gstreamer-base-1.0
 
 #include "callback.h"
 */

@@ -13,7 +13,7 @@ extern void X_gst_pad_set_chain_function(GstPad * pad) ;
 extern GstFlowReturn X_gst_pad_push(GstObject * parent, GstBuffer * buffer) ;
 
 extern GstFlowReturn go_transform_frame_ip (GstVideoFilter * filter,
-    GstVideoFrame * frame) ;
+   GstVideoFrame * frame) ;
 extern void X_go_set_callback_transform_ip(GstElement *e) ;
 extern void X_go_set_callback_id(GstElement *e, guint64 val)  ;
 

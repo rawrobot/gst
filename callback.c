@@ -12,8 +12,10 @@ void X_gst_pad_set_chain_function(GstPad * pad) {
 
 GstFlowReturn
 X_gst_pad_push(GstObject * parent, GstBuffer * buffer) {
-    GstGoCallback * filter = GST_GOCALLBACK (parent);
-    return gst_pad_push( filter->srcpad, buffer) ;
+    GstElement * filter = GST_ELEMENT_CAST (parent);
+    GList* srcpads = filter->srcpads ;
+    GstPad* srcpad = GST_PAD_CAST(g_list_nth_data(srcpads, 0)) ;
+    return gst_pad_push( srcpad, buffer) ;
 }
 
 // @see https://developer.gnome.org/gobject/stable/gobject-properties.html
