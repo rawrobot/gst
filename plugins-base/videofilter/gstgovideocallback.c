@@ -68,6 +68,7 @@ enum
 {
   PROP_0,
   PROP_IP_CALLBACK,
+  PROP_CALLBACK,
   PROP_CALLER_ID
 };
 
@@ -115,19 +116,24 @@ gst_govideocallback_class_init (GstGoVideoCallbackClass * klass)
   base_transform_class->start = GST_DEBUG_FUNCPTR (gst_govideocallback_start);
   base_transform_class->stop = GST_DEBUG_FUNCPTR (gst_govideocallback_stop);
   video_filter_class->set_info = GST_DEBUG_FUNCPTR (gst_govideocallback_set_info);
-  video_filter_class->transform_frame = NULL ; //GST_DEBUG_FUNCPTR (gst_govideocallback_transform_frame);
+  video_filter_class->transform_frame = GST_DEBUG_FUNCPTR (gst_govideocallback_transform_frame);
   video_filter_class->transform_frame_ip = GST_DEBUG_FUNCPTR (gst_govideocallback_transform_frame_ip);
 
   g_object_class_install_property (gobject_class, PROP_IP_CALLBACK,
-      g_param_spec_pointer ("transform-ip-callback", "Ip trasform callback",
+      g_param_spec_pointer ("transform-ip-callback", "Ip transform callback",
           "Go lang callback for ip transformation",
-          G_PARAM_READWRITE)) ; // |  G_PARAM_STATIC_STRINGS));  
+          G_PARAM_READWRITE)) ;
+
+ g_object_class_install_property (gobject_class, PROP_CALLBACK,
+      g_param_spec_pointer ("transform-callback", "Transform callback",
+          "Go lang callback for ip transformation",
+          G_PARAM_READWRITE)) ;
 
 g_object_class_install_property (gobject_class, PROP_CALLER_ID,
       g_param_spec_uint64 ("caller-id", "Ip trasform caller id",
           "It's ID golang callback provider",
            0, G_MAXUINT64, 0, 
-          G_PARAM_READWRITE )) ;//| G_PARAM_STATIC_STRINGS));  
+          G_PARAM_READWRITE )) ;
 
 }
 
@@ -150,7 +156,13 @@ gst_govideocallback_set_property (GObject * object, guint property_id,
         //GST_DEBUG_OBJECT (govideocallback, "set_property transform-ip-callback %"G_GPOINTER_FORMAT " ",v);
         govideocallback->ip_callback =  (gst_govideocallback_tarnsform_ip_t)pv;
         }
-      break; 
+      break;
+      case PROP_CALLBACK:{
+        gpointer pv = g_value_get_pointer (value) ;
+        //GST_DEBUG_OBJECT (govideocallback, "set_property transform-callback %"G_GPOINTER_FORMAT " ",v);
+        govideocallback->callback =  (gst_govideocallback_tarnsform_t)pv;
+        }
+      break;
       case PROP_CALLER_ID:{
         guint64 v = g_value_get_uint64 (value); 
        GST_DEBUG_OBJECT (govideocallback, "set_property caller-id %"G_GUINT64_FORMAT " ",v);
@@ -175,6 +187,9 @@ gst_govideocallback_get_property (GObject * object, guint property_id,
       case PROP_IP_CALLBACK:
          g_value_set_pointer (value, (gpointer)govideocallback->ip_callback);
       break; 
+      case PROP_CALLBACK:
+         g_value_set_pointer (value, (gpointer)govideocallback->callback);
+      break;
     case PROP_CALLER_ID:
       g_value_set_uint64 (value, govideocallback->caller_id);
       break;  
@@ -245,8 +260,13 @@ gst_govideocallback_transform_frame (GstVideoFilter * filter, GstVideoFrame * in
     GstVideoFrame * outframe)
 {
   GstGoVideoCallback *govideocallback = GST_GOVIDEOCALLBACK (filter);
-
   GST_DEBUG_OBJECT (govideocallback, "transform_frame");
+    GST_DEBUG_OBJECT(govideocallback, "caller-id %"G_GUINT64_FORMAT" ", (govideocallback->caller_id));
+  if (govideocallback->callback != NULL){
+    GST_DEBUG_OBJECT (govideocallback, "transform_frame call callback");
+       return govideocallback->callback(filter, inframe, outframe) ;
+
+    }
 
   return GST_FLOW_OK;
 }
@@ -257,32 +277,9 @@ gst_govideocallback_transform_frame_ip (GstVideoFilter * filter, GstVideoFrame *
     GstGoVideoCallback *govideocallback = GST_GOVIDEOCALLBACK (filter);
     GST_DEBUG_OBJECT (govideocallback, "transform_frame_ip");
     GST_DEBUG_OBJECT(govideocallback, "caller-id %"G_GUINT64_FORMAT" ", (govideocallback->caller_id));
-  /*
-  GstVideoInfo * video_info= NULL;
-  GstBuffer * video_buffer= NULL;
-   // set RGB pixels to black one at a time
-   if (gst_video_frame_map (frame, video_info, video_buffer, GST_MAP_WRITE)) {
-     guint8 *pixels = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
-     guint stride = GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0);
-     guint pixel_stride = GST_VIDEO_FRAME_COMP_PSTRIDE (frame, 0);
-    guint height =GST_VIDEO_FRAME_COMP_HEIGHT (frame, 0);
-    guint width = GST_VIDEO_FRAME_COMP_WIDTH (frame, 0);
-     guint  h, w ;
-     for (h = 0; h < height; ++h) {
-       for (w = 0; w < width; ++w) {
-         guint8 *pixel = pixels + h * stride + w * pixel_stride;
-
-         memset (pixel, 0, pixel_stride);
-       }
-     }
-
-     gst_video_frame_unmap (frame);
-   }
-
-*/  
   if (govideocallback->ip_callback != NULL){
     GST_DEBUG_OBJECT (govideocallback, "transform_frame_ip call callback");
-       govideocallback->ip_callback(filter, frame) ;
+       return govideocallback->ip_callback(filter, frame) ;
     
     } 
  

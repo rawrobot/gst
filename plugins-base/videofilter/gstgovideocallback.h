@@ -34,9 +34,12 @@ G_BEGIN_DECLS
 typedef struct _GstGoVideoCallback GstGoVideoCallback;
 typedef struct _GstGoVideoCallbackClass GstGoVideoCallbackClass;
 
-typedef GstFlowReturn (*gst_govideocallback_tarnsform_ip_t) (GstVideoFilter * filter, GstVideoFrame * frame) ; //, guint64 caller_id);
+typedef GstFlowReturn (*gst_govideocallback_tarnsform_ip_t) (GstVideoFilter * filter,
+        GstVideoFrame * frame) ;
+typedef GstFlowReturn (*gst_govideocallback_tarnsform_t) (GstVideoFilter * filter,
+        GstVideoFrame * inframe, GstVideoFrame * outframe) ;
 
-void gst_govideocallback_set_tarnsform_ip_callback(GstVideoFilter * filter, 
+void gst_govideocallback_set_tarnsform_ip_callback(GstVideoFilter * filter,
     gst_govideocallback_tarnsform_ip_t* fn, guint64 caller_id ) ;
 
 struct _GstGoVideoCallback
@@ -44,6 +47,7 @@ struct _GstGoVideoCallback
     GstVideoFilter base_govideocallback;
     guint64 caller_id ;
     gst_govideocallback_tarnsform_ip_t ip_callback;
+    gst_govideocallback_tarnsform_t callback;
 
 };
 

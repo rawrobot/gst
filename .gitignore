@@ -22,8 +22,8 @@ vendor/
 examples/camui/out
 examples/videorecui/out
 .settings/
-goplugin/_build
-videofilter/_build/
+plugins-base/goplugin/_build
+plugins-base/videofilter/_build/
 
 
 #examples'  exe files
