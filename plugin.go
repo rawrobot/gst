@@ -37,9 +37,11 @@ func go_callback_chain(CgstPad *C.GstPad, CgstElement *C.GstObject, buf *C.GstBu
 
 	var b []byte
 	ret := C.GstFlowReturn(callback(plugin, pad, b))
+	if ret == C.GST_FLOW_ERROR {
+		return ret
+	}
 
-	ret = C.X_gst_pad_push(CgstElement, buf)
-	return ret
+	return C.X_gst_pad_push(CgstElement, buf)
 }
 
 func (e *Plugin) SetOnChainCallback(callback ChainCallback) {

@@ -84,11 +84,11 @@ func TestVFCallbackSet(t *testing.T) {
 		t.Error("pipe find element error")
 		t.FailNow()
 	}
-	plugin := &VideoFilterPlugin{
+	plugin := &VideoIPTransformPlugin{
 		Element: *element,
 	}
 
-	SetVideoTransformIpCallback(plugin)
+	SetVideoIPTransformCallback(plugin)
 
 	pipeline.SetState(StatePlaying)
 	time.Sleep(10000000)
@@ -116,11 +116,11 @@ func TestVFCallerIdSet(t *testing.T) {
 		t.Error("pipe find element error")
 		t.FailNow()
 	}
-	plugin := &VideoFilterPlugin{
+	plugin := &VideoIPTransformPlugin{
 		Element: *element,
 	}
 
-	SetVideoTransformIpCallback(plugin)
+	SetVideoIPTransformCallback(plugin)
 
 	pipeline.SetState(StatePlaying)
 	time.Sleep(10000000)
@@ -147,11 +147,11 @@ func TestVFCallbackMem(t *testing.T) {
 		t.Error("pipe find element error")
 		t.FailNow()
 	}
-	plugin := &VideoFilterPlugin{
+	plugin := &VideoIPTransformPlugin{
 		Element: *element,
 	}
 
-	SetVideoTransformIpCallback(plugin)
+	SetVideoIPTransformCallback(plugin)
 
 	pipeline.SetState(StatePlaying)
 	time.Sleep(1_000_000_000)

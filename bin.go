@@ -66,13 +66,10 @@ func BinNew(name string) (bin *Bin) {
 func (b *Bin) Add(child *Element) {
 
 	C.X_gst_bin_add(b.GstElement, child.GstElement)
-	return
 }
 
 func (b *Bin) Remove(child *Element) {
-
 	C.X_gst_bin_remove(b.GstElement, child.GstElement)
-	return
 }
 
 func (b *Bin) AddMany(elements ...*Element) {
@@ -81,8 +78,6 @@ func (b *Bin) AddMany(elements ...*Element) {
 			C.X_gst_bin_add(b.GstElement, e.GstElement)
 		}
 	}
-
-	return
 }
 
 func (b *Bin) GetByName(name string) (element *Element) {

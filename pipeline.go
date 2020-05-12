@@ -57,8 +57,7 @@ func PipelineNew(name string) (e *Pipeline, err error) {
 
 	gstElt := C.gst_pipeline_new(pName)
 	if gstElt == nil {
-		err = errors.New(fmt.Sprintf("could not create a Gstreamer pipeline name %s", name))
-		return
+		return e, fmt.Errorf("could not create a Gstreamer pipeline name %s", name)
 	}
 
 	e = &Pipeline{}
@@ -69,7 +68,7 @@ func PipelineNew(name string) (e *Pipeline, err error) {
 		C.gst_object_unref(C.gpointer(unsafe.Pointer(e.GstElement)))
 	})
 
-	return
+	return e, err
 }
 
 func (p *Pipeline) SetState(state StateOptions) {

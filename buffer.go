@@ -47,7 +47,7 @@ func BufferGetData(gstBuffer *Buffer) (data []byte, err error) {
 	defer C.free(unsafe.Pointer(mapInfo))
 
 	if int(C.X_gst_buffer_map(gstBuffer.C, mapInfo)) == 0 {
-		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
+		err = fmt.Errorf("could not map gstBuffer %#v", gstBuffer)
 		return
 	}
 	CData := (*[1 << 30]byte)(unsafe.Pointer(mapInfo.data))

@@ -21,7 +21,7 @@ import (
 var (
 	mutex         sync.Mutex
 	callbackStore = map[uint64]*Element{}
-	EOS           = errors.New("EOS")
+	ErrEOS        = errors.New("EOS")
 )
 
 type PadAddedCallback func(element *Element, pad *Pad)
@@ -53,16 +53,14 @@ func (e *Element) Name() (name string) {
 func (e *Element) Link(dst *Element) bool {
 
 	result := C.gst_element_link(e.GstElement, dst.GstElement)
-	if result == C.TRUE {
-		return true
-	}
-	return false
+	return result == C.TRUE
 }
 
 func (e *Element) GetPadTemplate(name string) (padTemplate *PadTemplate) {
 
 	n := (*C.gchar)(unsafe.Pointer(C.CString(name)))
 	defer C.g_free(C.gpointer(unsafe.Pointer(n)))
+
 	CPadTemplate := C.gst_element_class_get_pad_template(C.X_GST_ELEMENT_GET_CLASS(e.GstElement), n)
 	padTemplate = &PadTemplate{
 		C: CPadTemplate,
@@ -108,26 +106,17 @@ func (e *Element) GetStaticPad(name string) (pad *Pad) {
 }
 
 func (e *Element) AddPad(pad *Pad) bool {
-
 	Cret := C.gst_element_add_pad(e.GstElement, pad.pad)
-	if Cret == 1 {
-		return true
-	}
-
-	return false
+	return Cret == 1
 }
 
 func (e *Element) GetClockBaseTime() uint64 {
-
 	CClockTime := C.gst_element_get_base_time(e.GstElement)
-
 	return uint64(CClockTime)
 }
 
 func (e *Element) GetClock() (gstClock *Clock) {
-
 	CElementClock := C.gst_element_get_clock(e.GstElement)
-
 	gstClock = &Clock{
 		C: CElementClock,
 	}
@@ -135,25 +124,20 @@ func (e *Element) GetClock() (gstClock *Clock) {
 	runtime.SetFinalizer(gstClock, func(gstClock *Clock) {
 		C.gst_object_unref(C.gpointer(unsafe.Pointer(gstClock.C)))
 	})
-
-	return
+	return gstClock
 }
 
-func (e *Element) PushBuffer(data []byte) (err error) {
+func (e *Element) PushBuffer(data []byte) error {
 
 	b := C.CBytes(data)
 	defer C.free(b)
 
-	var gstReturn C.GstFlowReturn
-
-	gstReturn = C.X_gst_app_src_push_buffer(e.GstElement, b, C.int(len(data)))
-
+	gstReturn := C.X_gst_app_src_push_buffer(e.GstElement, b, C.int(len(data)))
 	if gstReturn != C.GST_FLOW_OK {
-		err = errors.New("could not push buffer on appsrc element")
-		return
+		return errors.New("could not push buffer on appsrc element")
 	}
 
-	return
+	return nil
 }
 
 func (e *Element) PullSample() (sample *Sample, err error) {
@@ -175,8 +159,7 @@ func (e *Element) PullSample() (sample *Sample, err error) {
 	defer C.free(unsafe.Pointer(mapInfo))
 
 	if int(C.X_gst_buffer_map(gstBuffer, mapInfo)) == 0 {
-		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
-		return
+		return sample, fmt.Errorf("could not map gstBuffer %#v", gstBuffer)
 	}
 
 	CData := (*[1 << 30]byte)(unsafe.Pointer(mapInfo.data))
@@ -198,43 +181,38 @@ func (e *Element) PullSample() (sample *Sample, err error) {
 
 // appsink
 func (e *Element) IsEOS() bool {
-
 	Cbool := C.gst_app_sink_is_eos((*C.GstAppSink)(unsafe.Pointer(e.GstElement)))
-	if Cbool == 1 {
-		return true
-	}
-
-	return false
+	return Cbool == 1
 }
 
 func (e *Element) SetObject(name string, value interface{}) {
 
 	cname := (*C.gchar)(unsafe.Pointer(C.CString(name)))
 	defer C.g_free(C.gpointer(unsafe.Pointer(cname)))
-	switch value.(type) {
+	switch val := value.(type) {
 	case string:
-		str := (*C.gchar)(unsafe.Pointer(C.CString(value.(string))))
+		str := (*C.gchar)(unsafe.Pointer(C.CString(val)))
 		defer C.g_free(C.gpointer(unsafe.Pointer(str)))
 		C.X_gst_g_object_set_string(e.GstElement, cname, str)
 	case int:
-		C.X_gst_g_object_set_int(e.GstElement, cname, C.gint(value.(int)))
+		C.X_gst_g_object_set_int(e.GstElement, cname, C.gint(val))
 	case uint32:
-		C.X_gst_g_object_set_uint(e.GstElement, cname, C.guint(value.(uint32)))
+		C.X_gst_g_object_set_uint(e.GstElement, cname, C.guint(val))
 	case uint64:
-		C.X_gst_g_object_set_uint64(e.GstElement, cname, C.guint64(value.(uint64)))
+		C.X_gst_g_object_set_uint64(e.GstElement, cname, C.guint64(val))
 	case bool:
 		var cvalue int
-		if value.(bool) == true {
+		if val {
 			cvalue = 1
 		} else {
 			cvalue = 0
 		}
 		C.X_gst_g_object_set_bool(e.GstElement, cname, C.gboolean(cvalue))
 	case *Caps:
-		caps := value.(*Caps)
+		caps := val
 		C.X_gst_g_object_set_caps(e.GstElement, cname, caps.caps)
 	case *Structure:
-		structure := value.(*Structure)
+		structure := val
 		C.X_gst_g_object_set_structure(e.GstElement, cname, structure.C)
 	}
 }
@@ -312,7 +290,7 @@ func ElementFactoryMake(factoryName string, name string) (e *Element, err error)
 	gstElt := C.gst_element_factory_make(pFactoryName, pName)
 
 	if gstElt == nil {
-		err = errors.New(fmt.Sprintf("could not create a GStreamer element factoryName %s, name %s", factoryName, name))
+		err = fmt.Errorf("could not create a GStreamer element factoryName %s, name %s", factoryName, name)
 		return
 	}
 
@@ -351,7 +329,7 @@ func (e *Element) PullSampleOrSkip(buf []byte, skip bool) (result []byte, err er
 		//If an EOS event was received before any buffers, this function returns NULL.
 		//Use gst_app_sink_is_eos () to check for the EOS condition.
 		if e.IsEOS() {
-			err = EOS
+			err = ErrEOS
 		} else {
 			err = errors.New("could not gst_app_sink_pull_sample()")
 		}
@@ -377,7 +355,7 @@ func (e *Element) PullSampleOrSkip(buf []byte, skip bool) (result []byte, err er
 	//defer C.free(unsafe.Pointer(mapInfo))
 
 	if int(C.X_gst_buffer_map(gstBuffer, mapInfo)) == 0 {
-		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
+		err = fmt.Errorf("could not map gstBuffer %#v", gstBuffer)
 		return
 	}
 	defer C.gst_buffer_unmap(gstBuffer, mapInfo)
@@ -428,7 +406,7 @@ func (e *Element) PullSampleBB(bb *bytes.Buffer) (err error) {
 		//If an EOS event was received before any buffers, this function returns NULL.
 		//Use gst_app_sink_is_eos () to check for the EOS condition.
 		if e.IsEOS() {
-			err = EOS
+			err = ErrEOS
 		} else {
 			err = errors.New("could not gst_app_sink_pull_sample()")
 		}
@@ -450,7 +428,7 @@ func (e *Element) PullSampleBB(bb *bytes.Buffer) (err error) {
 	var mspInfoBuf [C.sizeof_GstMapInfo]byte
 	mapInfo := (*C.GstMapInfo)(unsafe.Pointer(&mspInfoBuf[0]))
 	if int(C.X_gst_buffer_map(gstBuffer, mapInfo)) == 0 {
-		err = errors.New(fmt.Sprintf("could not map gstBuffer %#v", gstBuffer))
+		err = fmt.Errorf("could not map gstBuffer %#v", gstBuffer)
 		return
 	}
 	defer C.gst_buffer_unmap(gstBuffer, mapInfo)
@@ -473,14 +451,10 @@ func (e *Element) PushBB(data *bytes.Buffer) (err error) {
 	buf := data.Bytes()
 	b := (unsafe.Pointer(&buf[0]))
 
-	var gstReturn C.GstFlowReturn
-
-	gstReturn = C.X_gst_app_src_push_buffer(e.GstElement, b, C.int(data.Len()))
-
+	gstReturn := C.X_gst_app_src_push_buffer(e.GstElement, b, C.int(data.Len()))
 	if gstReturn != C.GST_FLOW_OK {
-		err = errors.New("could not push buffer on appsrc element")
-		return
+		return errors.New("could not push buffer on appsrc element")
 	}
 
-	return
+	return err
 }

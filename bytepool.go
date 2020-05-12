@@ -9,7 +9,6 @@ import (
 type BytePool struct {
 	c chan []byte
 	w int
-	h int
 }
 
 // NewBytePool creates a new BytePool bounded to the given maxSize, with new

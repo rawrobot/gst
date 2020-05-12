@@ -11,19 +11,22 @@ import (
 	"unsafe"
 )
 
-var videoFilterStore = map[uintptr]VideoTransformIp{}
-
-const propertyName = "transform-ip-callback"
-const propCallerId = "caller-id"
+var videoTransformIpStore = map[uintptr]VideoIPTransformer{}
+var videoTransformStore = map[uintptr]VideoTransformer{}
 
 type Elementer interface {
 	CallbackID() uintptr
 	GetElement() Element
 }
 
-type VideoTransformIp interface {
+type VideoIPTransformer interface {
 	Elementer
 	TransformIP(frame *VideoFrame) error
+}
+
+type VideoTransformer interface {
+	Elementer
+	Transform(inframe, outframe *VideoFrame) error
 }
 
 type VideoFrame struct {
@@ -33,17 +36,14 @@ type VideoFrame struct {
 	Size          int
 }
 
-func (vfr *VideoFrame) InitData() bool {
-	if vfr.GstVideoFrame == nil {
-		return false
-	}
-	frame := vfr.GstVideoFrame
+func NewVideoFrame(frame *C.GstVideoFrame) (vfr *VideoFrame) {
+	vfr = &VideoFrame{GstVideoFrame: frame}
 
 	vfr.NPlanes = int(C.get_frame_n_planes(frame))
 	vfr.Size = int(frame.info.size)
 	vfr.Format = int(C.get_frame_format(frame))
 
-	return true
+	return vfr
 }
 
 func (vfr *VideoFrame) Plane(n int) (plane VideoFramePlane) {
@@ -74,20 +74,20 @@ func (vfr *VideoFramePlane) Close() {
 	vfr.Pixels = nil
 }
 
-type VideoFilterPlugin struct {
+type VideoIPTransformPlugin struct {
 	Element
 }
 
-func (vfp *VideoFilterPlugin) GetElement() Element {
+func (vfp *VideoIPTransformPlugin) GetElement() Element {
 	return vfp.Element
 }
 
 //"Pure virtual method :)
-func (vfp *VideoFilterPlugin) TransformIP(vf *VideoFrame) error {
+func (vfp *VideoIPTransformPlugin) TransformIP(vf *VideoFrame) error {
 	return nil
 }
 
-func (vfp *VideoFilterPlugin) CallbackID() uintptr {
+func (vfp *VideoIPTransformPlugin) CallbackID() uintptr {
 	return uintptr(unsafe.Pointer(vfp.GstElement))
 }
 
@@ -96,18 +96,14 @@ func go_transform_frame_ip(filter *C.GstVideoFilter, frame *C.GstVideoFrame) (re
 	ret = C.GST_FLOW_OK
 	callbackID := uintptr(unsafe.Pointer(filter))
 	mutex.Lock()
-	plugin := videoFilterStore[callbackID]
+	plugin := videoTransformIpStore[callbackID]
 	mutex.Unlock()
 
 	if plugin == nil {
 		return C.GST_FLOW_ERROR
 	}
 
-	vf := &VideoFrame{
-		GstVideoFrame: frame,
-	}
-	vf.InitData()
-
+	vf := NewVideoFrame(frame)
 	err := plugin.TransformIP(vf)
 
 	if err != nil {
@@ -117,32 +113,49 @@ func go_transform_frame_ip(filter *C.GstVideoFilter, frame *C.GstVideoFrame) (re
 	return ret
 }
 
-func SetVideoTransformIpCallback(vti VideoTransformIp) {
+//export go_transform_frame
+func go_transform_frame(filter *C.GstVideoFilter, inframe, outframe *C.GstVideoFrame) (ret C.GstFlowReturn) {
+	ret = C.GST_FLOW_OK
+	callbackID := uintptr(unsafe.Pointer(filter))
+	mutex.Lock()
+	plugin := videoTransformStore[callbackID]
+	mutex.Unlock()
+
+	if plugin == nil {
+		return C.GST_FLOW_ERROR
+	}
+
+	inVf := NewVideoFrame(inframe)
+	outVf := NewVideoFrame(outframe)
+	err := plugin.Transform(inVf, outVf)
+
+	if err != nil {
+		ret = C.GST_FLOW_ERROR
+	}
+
+	return ret
+}
+
+func SetVideoIPTransformCallback(vti VideoIPTransformer) {
 
 	callbackID := vti.CallbackID()
 	mutex.Lock()
-	videoFilterStore[callbackID] = vti
+	videoTransformIpStore[callbackID] = vti
 	mutex.Unlock()
-	//log.Printf("object %T", vti)
 	e := vti.GetElement().GstElement
-	//C.X_go_set_callback_id(e, C.guint64(callbackID))
 	C.X_go_set_callback_transform_ip(e)
 }
 
-// funcAddr returns function value fn executable code address.
-//@see https://habr.com/ru/post/482392/
-func funcAddr(fn interface{}) uintptr {
-	// emptyInterface is the header for an interface{} value.
-	type emptyInterface struct {
-		typ   uintptr
-		value *uintptr
-	}
-	e := (*emptyInterface)(unsafe.Pointer(&fn))
-	return *e.value
+func SetVideoTransformCallback(vti VideoTransformer) {
+	callbackID := vti.CallbackID()
+	mutex.Lock()
+	videoTransformStore[callbackID] = vti
+	mutex.Unlock()
+	e := vti.GetElement().GstElement
+	C.X_go_set_callback_transform(e)
 }
 
 //https://eli.thegreenplace.net/2019/passing-callbacks-and-pointers-to-cgo/
-
 type tSlice struct {
 	addr uintptr
 	len  int

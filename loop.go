@@ -34,8 +34,5 @@ func (l *GMainLoop) Quit() {
 
 func (l *GMainLoop) IsRuning() bool {
 	Cbool := C.g_main_loop_is_running(l.C)
-	if Cbool == 1 {
-		return true
-	}
-	return false
+	return Cbool == 1
 }
