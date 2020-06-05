@@ -21,7 +21,7 @@ func main() {
 		// 	" ! textoverlay name=ov text=\"nothing\" valignment=top halignment=left  ! autovideosink")
 		" textoverlay name=ov valignment=top halignment=left  ! autovideosink  " +
 			" videotestsrc pattern=ball ! video/x-raw,format=I420,width=320,height=240,framerate=25/1 ! ov.video_sink " +
-			" appsrc name=texter ! text/x-raw ! ov.text_sink")
+			" appsrc name=texter ! text/x-raw,format=utf8 ! ov.text_sink")
 
 	if err != nil {
 		log.Println("pipeline create error ", err.Error())
@@ -38,7 +38,7 @@ func main() {
 	}
 
 	appsrc := TextPusher{element}
-	go appsrc.PushTime(time.Millisecond * 40)
+	go appsrc.PushTime(25)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
@@ -60,7 +60,9 @@ type TextPusher struct {
 	appsrc *gst.Element
 }
 
-func (tp *TextPusher) PushTime(interval time.Duration) (err error) {
+func (tp *TextPusher) PushTime(framerate int) (err error) {
+	interval := time.Second / time.Duration(framerate)
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -70,10 +72,10 @@ func (tp *TextPusher) PushTime(interval time.Duration) (err error) {
 		}
 		currentTime := time.Now()
 		str := currentTime.Format("15:04:05")
-		b := make([]byte, len(str)+1)
-		copy(b[:], str)
-		err = tp.appsrc.PushBuffer(b)
-		#log.Println(b)
+		//b := make([]byte, len(str))
+		//copy(b[:], str)
+		err = tp.appsrc.PushBuffer([]byte(str))
+		//log.Println(b)
 		if err != nil {
 			break
 		}
