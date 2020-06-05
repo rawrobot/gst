@@ -1,38 +1,12 @@
 package main
 
 import (
-	"image"
 	"log"
 	"os"
 	"os/signal"
 
 	"github.com/bksworm/gst"
 )
-
-type SobelPlugin struct {
-	gst.VideoIPTransformPlugin
-	line int
-}
-
-func NewSobelPlugin(e *gst.Element) *SobelPlugin {
-	lp := &SobelPlugin{}
-	lp.VideoFilterPlugin.Element = *e
-	return lp
-}
-
-//draws horithontal black line at the midle of frame
-func (lp *SobelPlugin) TransformIP(vf *gst.VideoFrame) error {
-
-	y := vf.Plane(0)
-
-	grayImg := &image.Gray{
-		Pix:    y.Pixels,
-		Stride: y.Stride,
-		Rect:   image.Rect(y.Width, y.Height, 0, 0),
-	}
-	FilterGrayIP(grayImg)
-	return nil
-}
 
 func main() {
 	// If you like to see youself
@@ -59,8 +33,8 @@ func main() {
 		return
 	}
 
-	plugin := NewSobelPlugin(element)
-	gst.SetVideoIPTransformCallback(plugin)
+	//plugin := NewSobelPlugin(element)
+	//gst.SetVideoTransformIpCallback(plugin)
 
 	pipeline.SetState(gst.StatePlaying)
 

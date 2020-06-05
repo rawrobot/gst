@@ -109,7 +109,7 @@ func (p *Player) PictureTaker(saveToDir string) (err error) {
 
 		err = p.photoSink.PullSampleBB(sampleData)
 		if err != nil {
-			if err == gst.EOS && p.playing == false { //if pipeline is paused
+			if err == gst.ErrEOS && p.playing == false { //if pipeline is paused
 				//we should not call too often in such case
 				runtime.Gosched()
 				continue

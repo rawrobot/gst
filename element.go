@@ -458,3 +458,10 @@ func (e *Element) PushBB(data *bytes.Buffer) (err error) {
 
 	return err
 }
+
+//Emits signal without parametrs
+func (e *Element) EmitSignal(signal string) {
+	cstr := C.CString(signal)
+	defer C.free(unsafe.Pointer(cstr))
+	C.x_g_signal_emit_by_name(e.GstElement, cstr)
+}

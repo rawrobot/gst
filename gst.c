@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 #include "gst.h"
-#include "goplugin/gstgocallback.h"
 
 void X_gst_shim_init() {
   gchar *nano_str;
@@ -220,6 +219,8 @@ gchar* X_gst_pad_get_name(GstPad* pad) {
 }
 
 //By BKSWORM
+
+
 void cb_bus_message(GstBus * bus, GstMessage * message, gpointer poll_data) {
   GError *err;
   gchar *debug_info;
@@ -253,4 +254,8 @@ gboolean x_push_buffer_async(GstElement *element, void *buffer,int len) {
     }
 
     return TRUE;
+}
+
+void x_g_signal_emit_by_name(GstElement *element, const gchar *name){
+	g_signal_emit_by_name(element, name, NULL);
 }

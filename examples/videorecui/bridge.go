@@ -81,7 +81,7 @@ FOR_EXIT:
 
 		err = b.sink.PullSampleBB(sampleData)
 		if err != nil {
-			if err == gst.EOS && b.sink.GetState() != gst.StatePlaying { //if pipeline is paused
+			if err == gst.ErrEOS && b.sink.GetState() != gst.StatePlaying { //if pipeline is paused
 				//we should not call too often in such case
 				//log.Println("Skip input")
 				runtime.Gosched()

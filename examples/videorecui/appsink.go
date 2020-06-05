@@ -96,7 +96,7 @@ func (fs *FrameSink) Pull(ctx context.Context) (err error) {
 
 		err = fs.sink.PullSampleBB(sampleData)
 		if err != nil {
-			if err == gst.EOS && fs.sink.GetState() != gst.StatePlaying { //if pipeline is paused
+			if err == gst.ErrEOS && fs.sink.GetState() != gst.StatePlaying { //if pipeline is paused
 				//we should not call too often in such case
 				runtime.Gosched()
 				continue

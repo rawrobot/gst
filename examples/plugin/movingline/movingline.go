@@ -9,7 +9,7 @@ import (
 )
 
 type LinePlugin struct {
-	gst.VideoFilterPlugin
+	gst.VideoIPTransformPlugin
 	line int
 }
 
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	plugin := NewLinePlugin(element)
-	gst.SetVideoTransformIpCallback(plugin)
+	gst.SetVideoIPTransformCallback(plugin)
 
 	pipeline.SetState(gst.StatePlaying)
 

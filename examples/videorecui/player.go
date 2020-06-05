@@ -19,16 +19,18 @@ const (
 	wigetName        = "sinkWidget"
 	photoSinkName    = "photo_sink"
 	movieSinkName    = "movie_sink"
+	recoderName      = "file_recoder"
 	QUEUE_SIZE       = 10
 	playerAsErrCause = "player"
 )
 
 type Player struct {
-	pipe      *gst.Pipeline
-	widget    *gtk.Widget
-	photoSink *FrameSink
-	rec       *VideoRec
-	playing   bool
+	pipe           *gst.Pipeline
+	widget         *gtk.Widget
+	photoSink      *FrameSink
+	fileRecoderElm *gst.Element
+	rec            *VideoRec
+	playing        bool
 }
 
 func NewPlayer() (p *Player) {
@@ -43,11 +45,12 @@ const (
 		" !  tee name=u ! queue ! jpegenc !  appsink name=" + photoSinkName + " u. " +
 		" ! queue !   appsink name=" + movieSinkName +
 		" appsrc name=" + movieSrcName + "  stream-type=0 format=time is-live=true do-timestamp=true " +
-		"  ! video/x-raw,width=640,height=480,format=I420,framerate=30/1" +
-		"  ! x264enc !  matroskamux ! filesink location=video.mkv"
+		" ! video/x-raw,width=640,height=480,format=I420,framerate=30/1" +
+		" ! x264enc !  splitmuxsink  name=" + recoderName +
+		" muxer=matroskamux location=video%02d.mkv " +
+		" max-size-time=10000000000 max-size-bytes=1000000"
+		//"  ! x264enc !  matroskamux ! filesink location=video.mkv"
 		//" ! jpegenc !  multipartmux ! filesink location=video.mjpeg "
-		//" ! x264enc !  splitmuxsink muxer=matroskamux location=video%02d.mkv " +
-		//" max-size-time=10000000000 max-size-bytes=1000000"
 
 	CMD0 = "v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
 		"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
@@ -57,10 +60,6 @@ const (
 func (p *Player) Assemble() (err error) {
 	cmd := CMD
 	p.pipe, err = gst.ParseLaunch(cmd)
-
-	// p.pipe, err = gst.ParseLaunch("v4l2src device=/dev/video0  ! video/x-raw,width=640,height=480 ! " +
-	// 	"tee name=t !  queue !  videoconvert ! video/x-raw,format=BGRA ! gtksink name=" + wigetName +
-	// 	" t. ! queue !   jpegenc !  appsink name= " + photoSink)
 
 	if err != nil {
 		return errors.Wrap(err, playerAsErrCause)
@@ -82,6 +81,12 @@ func (p *Player) Assemble() (err error) {
 		return errors.Wrap(errors.Errorf("element %s not found", photoSinkName), playerAsErrCause)
 	}
 	p.photoSink = NewFrameSink(e, QUEUE_SIZE)
+
+	e = p.pipe.GetByName(recoderName)
+	if e == nil {
+		return errors.Wrap(errors.Errorf("element %s not found", recoderName), playerAsErrCause)
+	}
+	p.fileRecoderElm = e
 
 	return err
 }
@@ -105,6 +110,7 @@ func (p *Player) StartRecording() {
 func (p *Player) StopRecording() {
 	if p.playing {
 		p.rec.PullCtrl(0)
+		p.fileRecoderElm.EmitSignal("split-after")
 	}
 }
 

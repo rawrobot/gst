@@ -1,9 +1,8 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 
-
 #include "callback.h"
-#include "goplugin/gstgocallback.h"
 
 
 void X_gst_pad_set_chain_function(GstPad * pad) {
@@ -48,10 +47,24 @@ void X_go_set_callback_transform_ip(GstElement *e) {
     x_go_object_set_property_gpointer(e, "transform-ip-callback", val);
 }
 
+static GstFlowReturn gst_govideocallback_transform_frame(GstVideoFilter * filter,
+        GstVideoFrame * inframe, GstVideoFrame * outframe) {
+    return go_transform_frame(filter, inframe, outframe) ;
+
+}
+
+void X_go_set_callback_transform(GstElement *e) {
+    void*  val ;
+    val = (void*)gst_govideocallback_transform_frame;
+    x_go_object_set_property_gpointer(e, "transform--callback", val);
+}
+
+
 void X_go_set_callback_id(GstElement *e, guint64 val) {
     x_go_object_set_property_guint64(e, "caller-id", val);
 }
 
+// GST_VIDEO_FRAME_* macro wrapers
 guint8* get_frame_data(GstVideoFrame* frame, int plane ) {
     return GST_VIDEO_FRAME_PLANE_DATA(frame, plane) ;
 }
