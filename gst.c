@@ -238,12 +238,13 @@ void cb_bus_message(GstBus * bus, GstMessage * message, gpointer poll_data) {
 }
 
 // Function to push go buf to pipe line buffer is duped
-gboolean x_push_buffer_async(GstElement *element, void *buffer,int len, int framerate) {
+gboolean x_push_buffer_async(GstElement *element, void *buffer,int len, int framerate, int frames) {
     GstFlowReturn ret;
     gpointer p = g_memdup(buffer, len);
     GstBuffer *data = gst_buffer_new_wrapped(p, len); //TODO: do we need to free it?
+    // Set its timestamp and duration 
     GST_BUFFER_DURATION (data) = gst_util_uint64_scale (1, GST_SECOND, framerate);
-
+    GST_BUFFER_PTS (data) = gst_util_uint64_scale (frames, GST_SECOND, framerate);
 
     // Push the buffer into the appsrc
     g_signal_emit_by_name (GST_APP_SRC(G_OBJECT(element)), "push-buffer", data, &ret);

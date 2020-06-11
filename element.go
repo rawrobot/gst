@@ -382,11 +382,12 @@ func (e *Element) PullSampleOrSkip(buf []byte, skip bool) (result []byte, err er
 }
 
 //Helper function for async pusher
-func (e *Element) PushBufferAsync(buffer []byte, framerate int) error {
+func (e *Element) PushBufferAsync(buffer []byte, framerate int, frames int) error {
 	b := C.CBytes(buffer)
 	defer C.free(unsafe.Pointer(b))
 	//It pushes go buf to pipe line buffer is duped!
-	Cbool := C.x_push_buffer_async(e.GstElement, b, C.int(len(buffer)), C.int(framerate))
+	Cbool := C.x_push_buffer_async(e.GstElement, b, C.int(len(buffer)),
+		C.int(framerate), C.int(frames))
 	if Cbool == 0 {
 		return errors.New("push-buffer error")
 	}

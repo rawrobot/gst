@@ -60,7 +60,7 @@ extern void cb_bus_message(GstBus * bus, GstMessage * message, gpointer poll_dat
 extern void X_g_signal_connect_data(gpointer instance, const gchar *detailed_signal, void (*f)(GstElement*, GstBus*, GstMessage*, gpointer), gpointer data, GClosureNotify destroy_data, GConnectFlags connect_flags);
 
 //added by BKSWORM
-extern gboolean x_push_buffer_async(GstElement *element, void *buffer,int len, int framerate) ;
+extern  gboolean x_push_buffer_async(GstElement *element, void *buffer,int len, int framerate, int frames) ;
 extern void X_gst_g_object_set_uint64(GstElement *e, const gchar* p_name, guint64 p_value);
 extern void x_g_signal_emit_by_name(GstElement *element, const gchar *name) ;
 
