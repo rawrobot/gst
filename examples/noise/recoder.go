@@ -61,7 +61,7 @@ func (vrec *VideoRec) Pause() {
 
 func (vrec *VideoRec) Recoder() (err error) {
 	for frame := range vrec.frames {
-		err = vrec.frameSrc.PushBufferAsync(frame)
+		err = vrec.frameSrc.PushBuffer(frame) //)Async(frame)
 		if err != nil {
 			break
 		}

@@ -16,7 +16,7 @@ type SobelPlugin struct {
 
 func NewSobelPlugin(e *gst.Element) *SobelPlugin {
 	lp := &SobelPlugin{}
-	lp.VideoFilterPlugin.Element = *e
+	lp.VideoIPTransformPlugin.Element = *e
 	return lp
 }
 

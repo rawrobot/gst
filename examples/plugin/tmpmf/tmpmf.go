@@ -13,7 +13,7 @@ type TempMedianFilter struct {
 
 func NewTempMedianFilter(e *gst.Element) *TempMedianFilter {
 	lp := &TempMedianFilter{}
-	lp.VideoFilterPlugin.Element = *e
+	lp.VideoIPTransformPlugin.Element = *e
 	return lp
 }
 

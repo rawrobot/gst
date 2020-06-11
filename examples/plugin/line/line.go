@@ -13,7 +13,7 @@ type LinePlugin struct {
 
 func NewLinePlugin(e *gst.Element) *LinePlugin {
 	lp := &LinePlugin{}
-	lp.VideoFilterPlugin.Element = *e
+	lp.VideoIPTransformPlugin.Element = *e
 	return lp
 }
 
