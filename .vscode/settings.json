@@ -1,0 +1,6 @@
+{
+    "go.buildOnSave": "off",
+    "editor.minimap.enabled": false,
+    "go.installDependenciesWhenBuilding": false,
+    "restructuredtext.confPath": ""
+}
