@@ -57,6 +57,10 @@ void X_gst_g_object_set_bool(GstElement *e, const gchar* p_name, gboolean p_valu
   g_object_set(G_OBJECT(e), p_name, p_value, NULL);
 }
 
+void X_gst_g_object_set_gdouble(GstElement *e, const gchar* p_name, gdouble p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
 void X_gst_g_object_set_caps(GstElement *e, const gchar* p_name, const GstCaps *p_value) {
   g_object_set(G_OBJECT(e), p_name, p_value, NULL);
 }
@@ -70,6 +74,33 @@ void X_gst_g_object_setv(GObject *object, guint n_properties, const gchar *names
 }
 
 
+void X_gst_g_pad_set_string(GstPad *e, const gchar* p_name, gchar* p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
+void X_gst_g_pad_set_int(GstPad *e, const gchar* p_name, gint p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
+void X_gst_g_pad_set_uint(GstPad *e, const gchar* p_name, guint p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
+void X_gst_g_pad_set_bool(GstPad *e, const gchar* p_name, gboolean p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
+void X_gst_g_pad_set_gdouble(GstPad *e, const gchar* p_name, gdouble p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
+void X_gst_g_pad_set_caps(GstPad *e, const gchar* p_name, const GstCaps *p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
+
+void X_gst_g_pad_set_structure(GstPad *e, const gchar* p_name, const GstStructure *p_value) {
+  g_object_set(G_OBJECT(e), p_name, p_value, NULL);
+}
 void cb_new_pad(GstElement *element, GstPad *pad, gpointer data) {
   ElementUserData *d = (ElementUserData *)data;
   go_callback_new_pad(element, pad, d->callbackId);
@@ -78,7 +109,7 @@ void cb_new_pad(GstElement *element, GstPad *pad, gpointer data) {
 
 void X_g_signal_connect(GstElement* element, gchar* detailed_signal, guint64 callbackId) {
   printf("[ GST ] g_signal_connect called with signal %s\n", detailed_signal);
-  
+
   ElementUserData *d = calloc(1, sizeof(ElementUserData));
   d->callbackId = callbackId;
 
@@ -123,6 +154,11 @@ GstBuffer *X_gst_buffer_new_wrapped(gchar* src, gsize len) {
 
 gboolean X_gst_buffer_map(GstBuffer* gstBuffer, GstMapInfo* mapInfo) {
   return gst_buffer_map(gstBuffer, mapInfo, GST_MAP_READ);
+}
+
+void X_gst_pipeline_use_clock_real(GstElement *element) {
+  GstClock *d =  gst_pipeline_get_clock(GST_PIPELINE(element));
+  g_object_set(d,"clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
 }
 
 void X_gst_pipeline_use_clock(GstElement *element, GstClock *clock) {
@@ -203,15 +239,27 @@ void X_gst_pipeline_set_latency(GstElement* element, GstClockTime clockTime) {
 
 
 GstFlowReturn X_gst_app_src_push_buffer(GstElement* element, void *buffer,int len) {
-    GstFlowReturn ret ; 
-    gpointer p = g_memdup(buffer, len);
-    GstBuffer *data = gst_buffer_new_wrapped(p, len); 
-    ret  = gst_app_src_push_buffer(GST_APP_SRC(element), data);
-    return ret ;
+  gpointer p = g_memdup(buffer, len);
+  GstBuffer *data = gst_buffer_new_wrapped(p, len);
+
+  return gst_app_src_push_buffer(GST_APP_SRC(element), data);
 }
 
 GstClockTime X_gst_buffer_get_duration(GstBuffer* buffer) {
   return GST_BUFFER_DURATION(buffer);
+}
+
+
+GstClockTime X_gst_buffer_get_pts(GstBuffer* buffer) {
+  return GST_BUFFER_PTS(buffer);
+}
+
+GstClockTime X_gst_buffer_get_dts(GstBuffer* buffer) {
+  return GST_BUFFER_DTS(buffer);
+}
+
+GstClockTime X_gst_buffer_get_offset(GstBuffer* buffer) {
+  return GST_BUFFER_OFFSET(buffer);
 }
 
 gchar* X_gst_pad_get_name(GstPad* pad) {

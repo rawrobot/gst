@@ -10,7 +10,9 @@
 
 
 
-typedef struct ElementUserData{
+
+
+typedef struct ElementUserData {
     guint64 callbackId;
 } ElementUserData;
 
@@ -26,10 +28,19 @@ extern void X_gst_g_object_set_string(GstElement *e, const gchar* p_name, gchar*
 extern void X_gst_g_object_set_int(GstElement *e, const gchar* p_name, gint p_value);
 extern void X_gst_g_object_set_uint(GstElement *e, const gchar* p_name, guint p_value);
 extern void X_gst_g_object_set_bool(GstElement *e, const gchar* p_name, gboolean p_value);
+extern void X_gst_g_object_set_gdouble(GstElement *e, const gchar* p_name, gdouble p_value);
 extern void X_gst_g_object_set_caps(GstElement *e, const gchar* p_name, const GstCaps *p_value);
 extern void X_gst_g_object_set(GstElement* e, const gchar* p_name, const GValue* p_value);
 extern void X_gst_g_object_set_structure(GstElement *e, const gchar* p_name, const GstStructure *p_value);
 extern void X_gst_g_object_setv(GObject* object, guint n_properties, const gchar* names[], const GValue value[]);
+extern void X_gst_g_pad_set_string(GstPad *e, const gchar* p_name, gchar* p_value);
+extern void X_gst_g_pad_set_int(GstPad *e, const gchar* p_name, gint p_value);
+extern void X_gst_g_pad_set_uint(GstPad *e, const gchar* p_name, guint p_value);
+extern void X_gst_g_pad_set_bool(GstPad *e, const gchar* p_name, gboolean p_value);
+extern void X_gst_g_pad_set_gdouble(GstPad *e, const gchar* p_name, gdouble p_value);
+extern void X_gst_g_pad_set_caps(GstPad *e, const gchar* p_name, const GstCaps *p_value);
+extern void X_gst_g_pad_set(GstPad* e, const gchar* p_name, const GValue* p_value);
+extern void X_gst_g_pad_set_structure(GstPad *e, const gchar* p_name, const GstStructure *p_value);
 extern void X_g_signal_connect(GstElement* element, gchar* detailed_signal, guint64 callbackId);
 extern void cb_new_pad(GstElement* element, GstPad* pad, gpointer data);
 extern gboolean cb_pad_event(GstPad *pad, GstObject *parent, GstEvent *event);
@@ -40,6 +51,7 @@ extern void X_g_signal_emit_buffer_by_name(GstElement* element, const gchar* det
 extern GstBuffer *X_gst_buffer_new_wrapped(gchar* src, gsize len);
 extern gboolean X_gst_buffer_map(GstBuffer* gstBuffer, GstMapInfo* mapInfo);
 extern void X_gst_pipeline_use_clock(GstElement *element, GstClock *clock);
+extern void X_gst_pipeline_use_clock_real(GstElement *element);
 extern void X_gst_element_set_start_time_none(GstElement *element);
 extern void X_gst_structure_set_string(GstStructure *structure, const gchar *name, gchar* value);
 extern void X_gst_structure_set_int(GstStructure *structure, const gchar *name, gint value);
@@ -54,6 +66,10 @@ extern GstClockTime X_gst_pipeline_get_latency(GstElement* element);
 extern void X_gst_pipeline_set_latency(GstElement* element, GstClockTime clockTime);
 extern GstFlowReturn X_gst_app_src_push_buffer(GstElement* element, void *buffer,int len);
 extern GstClockTime X_gst_buffer_get_duration(GstBuffer* buffer);
+
+extern GstClockTime X_gst_buffer_get_pts(GstBuffer* buffer);
+extern GstClockTime X_gst_buffer_get_dts(GstBuffer* buffer);
+extern GstClockTime X_gst_buffer_get_offset(GstBuffer* buffer);
 
 extern gchar* X_gst_pad_get_name(GstPad* pad);
 extern void cb_bus_message(GstBus * bus, GstMessage * message, gpointer poll_data);

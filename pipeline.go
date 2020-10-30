@@ -38,6 +38,8 @@ func ParseLaunch(pipelineStr string) (p *Pipeline, err error) {
 	p = &Pipeline{}
 	p.GstElement = gstElt
 
+	C.X_gst_pipeline_use_clock_real(p.GstElement)
+
 	runtime.SetFinalizer(p, func(p *Pipeline) {
 		C.gst_object_unref(C.gpointer(unsafe.Pointer(p.GstElement)))
 	})
@@ -63,6 +65,8 @@ func PipelineNew(name string) (e *Pipeline, err error) {
 	e = &Pipeline{}
 
 	e.GstElement = gstElt
+
+	C.X_gst_pipeline_use_clock_real(e.GstElement)
 
 	runtime.SetFinalizer(e, func(e *Pipeline) {
 		C.gst_object_unref(C.gpointer(unsafe.Pointer(e.GstElement)))

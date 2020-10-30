@@ -15,7 +15,8 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
-	"unsafe"
+    "time"
+    "unsafe"
 )
 
 var (
@@ -105,6 +106,26 @@ func (e *Element) GetStaticPad(name string) (pad *Pad) {
 	return
 }
 
+func (e *Element) QueryPosition() (time.Duration, error) {
+    var position C.gint64
+
+    if int(C.gst_element_query_position(e.GstElement, C.GST_FORMAT_TIME, &position)) == 0 {
+        return 0, fmt.Errorf("position query failed")
+    }
+
+    return time.Duration(position / C.GST_SECOND) * time.Second, nil
+}
+
+func (e *Element) QueryDuration() (time.Duration, error) {
+    var duration C.gint64
+
+    if int(C.gst_element_query_duration(e.GstElement, C.GST_FORMAT_TIME, &duration)) == 0 {
+        return 0, fmt.Errorf("duration query failed")
+    }
+
+    return time.Duration(duration / C.GST_SECOND) * time.Second, nil
+}
+
 func (e *Element) AddPad(pad *Pad) bool {
 	Cret := C.gst_element_add_pad(e.GstElement, pad.pad)
 	return Cret == 1
@@ -167,10 +188,16 @@ func (e *Element) PullSample() (sample *Sample, err error) {
 	copy(data, CData[:])
 
 	duration := uint64(C.X_gst_buffer_get_duration(gstBuffer))
+	pts := uint64(C.X_gst_buffer_get_pts(gstBuffer))
+	dts := uint64(C.X_gst_buffer_get_dts(gstBuffer))
+	offset := uint64(C.X_gst_buffer_get_offset(gstBuffer))
 
 	sample = &Sample{
 		Data:     data,
 		Duration: duration,
+		Pts:      pts,
+		Dts:      dts,
+		Offset:   offset,
 	}
 
 	C.gst_buffer_unmap(gstBuffer, mapInfo)
@@ -208,13 +235,27 @@ func (e *Element) SetObject(name string, value interface{}) {
 			cvalue = 0
 		}
 		C.X_gst_g_object_set_bool(e.GstElement, cname, C.gboolean(cvalue))
+	case float64:
+		C.X_gst_g_object_set_gdouble(e.GstElement, cname, C.gdouble(value.(float64)))
 	case *Caps:
 		caps := val
 		C.X_gst_g_object_set_caps(e.GstElement, cname, caps.caps)
 	case *Structure:
 		structure := val
 		C.X_gst_g_object_set_structure(e.GstElement, cname, structure.C)
+	default:
+		panic(fmt.Errorf("SetObject: don't know how to set value for type %T", value))
 	}
+}
+
+func (e *Element) SendEvent(event *Event) bool {
+
+	Cbool := C.gst_element_send_event(e.GstElement, event.GstEvent)
+	if Cbool == 1 {
+		return true
+	}
+
+	return false
 }
 
 func (e *Element) cleanCallback() {
