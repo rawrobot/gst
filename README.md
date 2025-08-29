@@ -4,6 +4,12 @@ It is a small and simple go gstreamer binding. It is a fork from https://github.
 Moreover it implements interface to gstreamer videofilter by intercepting xx_transform_ip() call. 
 
 
+## NOTE
+
+It is my very old project. It is only for portfolio purposes, to show children of Agile that a software architect can work with different programming languages.
+
+
+
 ## Install
 
 *Ubuntu or Dedian*
